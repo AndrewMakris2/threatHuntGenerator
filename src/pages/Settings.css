@@ -1,0 +1,52 @@
+.settings-layout { display: flex; flex-direction: column; gap: var(--space-5); margin-top: var(--space-6); }
+
+.settings-section { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.settings-section-header {
+  display: flex; align-items: flex-start; gap: var(--space-4);
+}
+
+.settings-section-icon {
+  width: 44px; height: 44px; border-radius: var(--radius-lg);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+.settings-form { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.settings-provider-grid { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.settings-provider-btn {
+  display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-surface); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); font-size: var(--text-sm);
+  color: var(--text-secondary); cursor: pointer; transition: all var(--transition-fast);
+}
+.settings-provider-btn:hover { border-color: var(--accent-primary); color: var(--text-primary); }
+.settings-provider-btn.selected { border-color: var(--accent-primary); background: var(--accent-glow); color: var(--accent-primary); }
+
+.settings-data-stats {
+  display: flex; gap: var(--space-4);
+  padding: var(--space-4); background: var(--bg-surface);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-lg);
+}
+
+.settings-stat { text-align: center; flex: 1; }
+.settings-stat-value { font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--text-primary); }
+.settings-stat-label { font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px; }
+
+.settings-actions { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.settings-danger-zone {
+  padding: var(--space-4); background: rgba(239,68,68,0.05);
+  border: 1px solid rgba(239,68,68,0.15); border-radius: var(--radius-lg);
+  display: flex; flex-direction: column; gap: var(--space-3);
+}
+
+.settings-danger-title {
+  font-size: var(--text-sm); font-weight: var(--font-semibold);
+  color: var(--severity-critical);
+}
+
+.settings-about { display: flex; flex-direction: column; gap: var(--space-3); }
+.settings-about-meta { display: flex; flex-wrap: wrap; gap: var(--space-2); }

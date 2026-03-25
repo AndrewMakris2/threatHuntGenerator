@@ -1,0 +1,117 @@
+.risk-heatmap { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.risk-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--space-2);
+  height: 160px;
+  align-items: end;
+}
+
+.risk-cell {
+  position: relative;
+  height: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  cursor: default;
+  transition: transform var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.risk-cell:hover {
+  transform: scaleY(1.02);
+  transform-origin: bottom;
+}
+
+.risk-cell-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: height var(--transition-slow);
+}
+
+.risk-critical .risk-cell-bar { background: linear-gradient(180deg, rgba(239,68,68,0.3), rgba(239,68,68,0.7)); }
+.risk-critical { border-color: rgba(239,68,68,0.25); }
+
+.risk-high .risk-cell-bar { background: linear-gradient(180deg, rgba(249,115,22,0.3), rgba(249,115,22,0.7)); }
+.risk-high { border-color: rgba(249,115,22,0.25); }
+
+.risk-medium .risk-cell-bar { background: linear-gradient(180deg, rgba(234,179,8,0.3), rgba(234,179,8,0.6)); }
+.risk-medium { border-color: rgba(234,179,8,0.25); }
+
+.risk-low .risk-cell-bar { background: linear-gradient(180deg, rgba(34,197,94,0.2), rgba(34,197,94,0.5)); }
+.risk-low { border-color: rgba(34,197,94,0.2); }
+
+.risk-cell-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2) var(--space-1);
+  gap: 1px;
+}
+
+.risk-cell-score {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.risk-cell-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-weight: var(--font-medium);
+  line-height: 1.2;
+}
+
+.risk-cell-level {
+  font-size: 8px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.risk-critical .risk-cell-score { color: #fca5a5; }
+.risk-high     .risk-cell-score { color: #fdba74; }
+.risk-medium   .risk-cell-score { color: #fde047; }
+.risk-low      .risk-cell-score { color: #86efac; }
+
+/* Overall */
+.risk-heatmap-overall {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.risk-overall-label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: var(--font-medium);
+  white-space: nowrap;
+}
+
+.risk-overall-bar { flex: 1; }
+
+.risk-overall-score {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.risk-overall-max {
+  font-size: var(--text-sm);
+  opacity: 0.5;
+}
+
+@media (max-width: 640px) {
+  .risk-heatmap-grid { grid-template-columns: repeat(4, 1fr); }
+}

@@ -1,0 +1,43 @@
+.mitre-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: var(--mitre-bg, rgba(56,189,248,0.1));
+  border: 1px solid var(--mitre-border, rgba(56,189,248,0.25));
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  color: var(--mitre-color, var(--accent-primary));
+  white-space: nowrap;
+  cursor: default;
+  transition: all var(--transition-fast);
+}
+
+.mitre-badge:hover {
+  filter: brightness(1.15);
+}
+
+.mitre-badge-id { font-weight: 700; }
+
+.mitre-badge-name {
+  font-family: var(--font-sans);
+  font-weight: var(--font-medium);
+  font-size: var(--text-xs);
+  opacity: 0.85;
+}
+
+.mitre-badge-tactic {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  opacity: 0.6;
+  padding-left: 4px;
+  border-left: 1px solid currentColor;
+}
+
+.mitre-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
