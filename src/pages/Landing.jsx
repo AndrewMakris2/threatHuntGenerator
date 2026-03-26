@@ -1,11 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Crosshair, Zap, Target, ArrowRight,
+  Zap, Target, ArrowRight,
   CheckCircle, Lock, Globe, Database,
   ChevronRight, TrendingUp, Shield,
 } from 'lucide-react';
-import { PhantomWordmark } from '../components/common/PhantomLogo';
 import PhantomLogo from '../components/common/PhantomLogo';
 import './Landing.css';
 

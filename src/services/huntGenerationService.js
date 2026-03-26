@@ -465,8 +465,6 @@ Return a JSON array where each element is:
  * @returns {Array} - Array of personalized hunt objects
  */
 export async function generateHunts(profile, options = {}, aiSettings = null) {
-  const { maxHunts = 12, categories = [] } = options;
-
   // Try AI generation if provider + key are configured
   const useAI = (aiSettings?.apiKey && aiSettings.provider !== 'local') || aiSettings?.provider === 'local';
   if (useAI) {

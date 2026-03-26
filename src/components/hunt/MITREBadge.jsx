@@ -15,7 +15,6 @@ export default function MITREBadge({ techniqueId, showTactic = false, size = 'sm
   }
 
   const color = getTacticColor(technique.tactic);
-  const label = size === 'sm' ? techniqueId : `${techniqueId} — ${technique.name}`;
 
   return (
     <span

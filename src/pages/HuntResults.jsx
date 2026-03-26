@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Crosshair, Search, SlidersHorizontal, X, Download,
+  Crosshair, Search, SlidersHorizontal, X,
   FileText, FileJson, Printer, Sparkles, Filter, Trash2,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../context/AppContext';

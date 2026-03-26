@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Crosshair, BookmarkCheck, TrendingUp, AlertTriangle,
-  Sparkles, ArrowRight, Target, Shield, Clock, LayoutDashboard,
+  Sparkles, ArrowRight, Shield, LayoutDashboard,
   Building2, ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -12,12 +12,11 @@ import ATTACKCoverage from '../components/dashboard/ATTACKCoverage';
 import HuntCard from '../components/hunt/HuntCard';
 import HuntDetail from '../components/hunt/HuntDetail';
 import Modal from '../components/common/Modal';
-import { HUNT_CATEGORIES } from '../data/huntTemplates';
 import { getEnvironmentRiskScore, getCategoryStats } from '../services/huntGenerationService';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { state, dispatch } = useApp();
+  const { state } = useApp();
   const navigate = useNavigate();
   const [activeHunt, setActiveHunt] = React.useState(null);
 

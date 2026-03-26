@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BookmarkCheck, Search, Trash2, Sparkles, SlidersHorizontal, X,
-  FileJson, Download,
+  FileJson,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../context/AppContext';
 import HuntCard from '../components/hunt/HuntCard';

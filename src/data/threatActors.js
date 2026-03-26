@@ -144,7 +144,7 @@ export const getRelevantThreatActors = (profile) => {
   const industry = (profile.industry || '').toLowerCase();
   const regions = (profile.regions || []).map(r => r.toLowerCase());
   const hasCloud = (profile.cloudProviders || []).length > 0;
-  const hasSaaS = (profile.criticalApps || '').toLowerCase().includes('saas');
+  // hasSaaS reserved for future scoring use
 
   Object.values(THREAT_ACTORS).forEach(actor => {
     let score = 0;

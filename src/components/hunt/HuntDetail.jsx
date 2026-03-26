@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Bookmark, BookmarkCheck, X, Shield, Target, Clock,
   AlertTriangle, CheckCircle, XCircle, TrendingUp, Database,
-  Download, Copy, FileText, ChevronDown, User, Layers,
+  Download, Copy, FileText, User, Layers,
   Info, Zap, ArrowRight,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -18,10 +18,9 @@ import './HuntDetail.css';
 const TABS = ['Overview', 'Hunt Steps', 'Queries', 'IOCs', 'Remediation', 'Notes'];
 
 export default function HuntDetail({ hunt, onClose }) {
-  const { isHuntSaved, toggleSaveHunt, addToast, dispatch, activeCompany } = useApp();
+  const { isHuntSaved, toggleSaveHunt, addToast, activeCompany } = useApp();
   const [activeTab, setActiveTab] = useState('Overview');
   const [notes, setNotes]         = useState(hunt.notes || '');
-  const [expanded, setExpanded]   = useState({});
   const [showPDFCustomizer, setShowPDFCustomizer] = useState(false);
 
   if (!hunt) return null;
@@ -49,10 +48,6 @@ export default function HuntDetail({ hunt, onClose }) {
     copyQueryToClipboard(query)
       .then(() => addToast(`Query copied to clipboard`, 'success'))
       .catch(() => addToast('Copy failed', 'error'));
-  }
-
-  function toggleSection(id) {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   }
 
   return (
