@@ -36,7 +36,7 @@ export default function Dashboard() {
           <div className="dashboard-welcome-icon">
             <Shield size={36} />
           </div>
-          <h1 className="page-title">Welcome to Threat Hunt Generator</h1>
+          <h1 className="page-title">Welcome to Phantom Hunter</h1>
           <p className="page-subtitle" style={{ fontSize: 'var(--text-base)', maxWidth: 480, textAlign: 'center', marginTop: 'var(--space-2)' }}>
             Build your company profile to generate tailored, environment-specific threat hunting scenarios.
           </p>

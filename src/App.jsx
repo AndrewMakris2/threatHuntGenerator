@@ -8,6 +8,7 @@ import ToastContainer from './components/common/Toast';
 
 import Landing        from './pages/Landing';
 import Dashboard      from './pages/Dashboard';
+import Companies      from './pages/Companies';
 import CompanyProfile from './pages/CompanyProfile';
 import HuntGenerator  from './pages/HuntGenerator';
 import HuntResults    from './pages/HuntResults';
@@ -46,6 +47,9 @@ export default function App() {
           {/* App shell routes */}
           <Route path="/" element={
             <AppShell><Dashboard /></AppShell>
+          } />
+          <Route path="/companies" element={
+            <AppShell><Companies /></AppShell>
           } />
           <Route path="/profile" element={
             <AppShell><CompanyProfile /></AppShell>

@@ -48,7 +48,18 @@ export default function CompanyProfile() {
 
   function handleFinish() {
     dispatch({ type: ACTIONS.SET_PROFILE_COMPLETE, value: true });
-    addToast(`Profile saved for ${profile.companyName || 'your company'}`, 'success');
+
+    // Auto-save / update in the Companies library
+    const existing = state.savedCompanies.find(
+      c => c.companyName?.toLowerCase() === profile.companyName?.toLowerCase()
+    );
+    if (existing) {
+      dispatch({ type: ACTIONS.UPDATE_COMPANY, company: { ...existing, ...profile } });
+    } else {
+      dispatch({ type: ACTIONS.SAVE_COMPANY, company: { ...profile } });
+    }
+
+    addToast(`${profile.companyName || 'Company'} saved to your Companies library`, 'success');
     navigate('/generate');
   }
 

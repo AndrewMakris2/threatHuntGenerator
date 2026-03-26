@@ -1,6 +1,6 @@
 /**
  * AppContext — Global application state
- * Manages company profile, generated hunts, saved hunts, and UI state
+ * Manages company profile, generated hunts, saved hunts, companies, and UI state
  */
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { EMPTY_COMPANY_PROFILE } from '../data/sampleData';
@@ -22,6 +22,13 @@ const initialState = {
 
   // Active hunt (for detail view)
   activeHunt: null,
+
+  // Saved company profiles
+  savedCompanies: [],
+  activeCompanyId: null,
+
+  // AI provider settings (apiKey intentionally excluded from localStorage)
+  aiSettings: { provider: 'anthropic', model: '', endpoint: '' },
 
   // UI
   sidebarCollapsed: false,
@@ -60,6 +67,13 @@ export const ACTIONS = {
   SAVE_HUNT:             'SAVE_HUNT',
   UNSAVE_HUNT:           'UNSAVE_HUNT',
   UPDATE_HUNT_NOTES:     'UPDATE_HUNT_NOTES',
+
+  // Company profiles
+  SAVE_COMPANY:          'SAVE_COMPANY',
+  UPDATE_COMPANY:        'UPDATE_COMPANY',
+  DELETE_COMPANY:        'DELETE_COMPANY',
+  SET_ACTIVE_COMPANY:    'SET_ACTIVE_COMPANY',
+  SET_AI_SETTINGS:       'SET_AI_SETTINGS',
 
   // UI
   TOGGLE_SIDEBAR:        'TOGGLE_SIDEBAR',
@@ -153,6 +167,65 @@ function appReducer(state, action) {
         ),
       };
 
+    // ── Company Profiles ───────────────────────────────────────────────────
+    case ACTIONS.SAVE_COMPANY: {
+      const company = {
+        ...action.company,
+        id: action.company.id || `co-${Date.now()}`,
+        createdAt: action.company.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastUsedAt: new Date().toISOString(),
+        brandColor: action.company.brandColor || '#dc2626',
+        accentColor: action.company.accentColor || '#ef4444',
+        logoUrl: action.company.logoUrl || '',
+      };
+      // Auto-activate if no company is active yet
+      const shouldActivate = !state.activeCompanyId;
+      return {
+        ...state,
+        savedCompanies: [...state.savedCompanies, company],
+        activeCompanyId: shouldActivate ? company.id : state.activeCompanyId,
+        companyProfile: shouldActivate ? { ...company } : state.companyProfile,
+        profileComplete: shouldActivate ? true : state.profileComplete,
+      };
+    }
+
+    case ACTIONS.UPDATE_COMPANY:
+      return {
+        ...state,
+        savedCompanies: state.savedCompanies.map(c =>
+          c.id === action.company.id
+            ? { ...c, ...action.company, updatedAt: new Date().toISOString() }
+            : c
+        ),
+      };
+
+    case ACTIONS.DELETE_COMPANY:
+      return {
+        ...state,
+        savedCompanies: state.savedCompanies.filter(c => c.id !== action.companyId),
+        activeCompanyId: state.activeCompanyId === action.companyId ? null : state.activeCompanyId,
+      };
+
+    case ACTIONS.SET_ACTIVE_COMPANY: {
+      const company = state.savedCompanies.find(c => c.id === action.companyId);
+      if (!company) return { ...state, activeCompanyId: null };
+      return {
+        ...state,
+        activeCompanyId: action.companyId,
+        companyProfile: { ...company },
+        profileComplete: true,
+        savedCompanies: state.savedCompanies.map(c =>
+          c.id === action.companyId
+            ? { ...c, lastUsedAt: new Date().toISOString() }
+            : c
+        ),
+      };
+    }
+
+    case ACTIONS.SET_AI_SETTINGS:
+      return { ...state, aiSettings: { ...state.aiSettings, ...action.settings } };
+
     // ── UI ────────────────────────────────────────────────────────────────
     case ACTIONS.TOGGLE_SIDEBAR:
       return { ...state, sidebarCollapsed: !state.sidebarCollapsed };
@@ -203,6 +276,9 @@ function loadPersistedState() {
       savedHunts: saved.savedHunts || [],
       generatedHunts: saved.generatedHunts || [],
       lastGeneratedAt: saved.lastGeneratedAt || null,
+      savedCompanies: saved.savedCompanies || [],
+      activeCompanyId: saved.activeCompanyId || null,
+      aiSettings: saved.aiSettings ? { provider: saved.aiSettings.provider || 'anthropic', model: saved.aiSettings.model || '', endpoint: saved.aiSettings.endpoint || '' } : { provider: 'anthropic', model: '', endpoint: '' },
     };
   } catch {
     return null;
@@ -227,10 +303,17 @@ export function AppProvider({ children }) {
         savedHunts: state.savedHunts,
         generatedHunts: state.generatedHunts,
         lastGeneratedAt: state.lastGeneratedAt,
+        savedCompanies: state.savedCompanies,
+        activeCompanyId: state.activeCompanyId,
+        aiSettings: { provider: state.aiSettings.provider, model: state.aiSettings.model, endpoint: state.aiSettings.endpoint },
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     } catch { /* quota exceeded or SSR */ }
-  }, [state.companyProfile, state.profileComplete, state.savedHunts, state.generatedHunts, state.lastGeneratedAt]);
+  }, [
+    state.companyProfile, state.profileComplete, state.savedHunts,
+    state.generatedHunts, state.lastGeneratedAt,
+    state.savedCompanies, state.activeCompanyId, state.aiSettings,
+  ]);
 
   // ── Helper actions ───────────────────────────────────────────────────────
   const addToast = useCallback((message, type = 'info', duration = 4000) => {
@@ -257,8 +340,11 @@ export function AppProvider({ children }) {
     [isHuntSaved, addToast]
   );
 
+  // Computed: active company object
+  const activeCompany = state.savedCompanies.find(c => c.id === state.activeCompanyId) || null;
+
   return (
-    <AppContext.Provider value={{ state, dispatch, addToast, isHuntSaved, toggleSaveHunt }}>
+    <AppContext.Provider value={{ state, dispatch, addToast, isHuntSaved, toggleSaveHunt, activeCompany }}>
       {children}
     </AppContext.Provider>
   );

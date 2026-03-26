@@ -246,6 +246,216 @@ function computeDataSourceCoverage(hunt, profile) {
   return Math.round(Math.min(100, (covered / sources.length) * 100));
 }
 
+// ── AI Provider Layer ─────────────────────────────────────────────────────────
+
+async function callAI(aiSettings, systemPrompt, userPrompt) {
+  const { provider, model, apiKey, endpoint } = aiSettings;
+
+  const openAIRequest = async (url, extraHeaders = {}) => {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...extraHeaders },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
+        ],
+        temperature: 0.7,
+        max_tokens: 6000,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `${provider} API error ${res.status}`);
+    }
+    const data = await res.json();
+    return data.choices[0].message.content;
+  };
+
+  if (provider === 'groq') {
+    return openAIRequest('https://api.groq.com/openai/v1/chat/completions', {
+      Authorization: `Bearer ${apiKey}`,
+    });
+  }
+
+  if (provider === 'openai') {
+    return openAIRequest('https://api.openai.com/v1/chat/completions', {
+      Authorization: `Bearer ${apiKey}`,
+    });
+  }
+
+  if (provider === 'anthropic') {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 6000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `Anthropic API error ${res.status}`);
+    }
+    const data = await res.json();
+    return data.content[0].text;
+  }
+
+  if (provider === 'azure') {
+    const base = (endpoint || '').replace(/\/$/, '');
+    return openAIRequest(
+      `${base}/openai/deployments/${model}/chat/completions?api-version=2024-02-15-preview`,
+      { 'api-key': apiKey }
+    );
+  }
+
+  if (provider === 'local') {
+    const base = (endpoint || 'http://localhost:11434').replace(/\/$/, '');
+    return openAIRequest(`${base}/v1/chat/completions`);
+  }
+
+  throw new Error(`Unknown AI provider: ${provider}`);
+}
+
+function extractJSON(text) {
+  // Strip markdown code fences
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/s);
+  if (fenced) return fenced[1].trim();
+  // Find outermost JSON array
+  const arrStart = text.indexOf('[');
+  const arrEnd   = text.lastIndexOf(']');
+  if (arrStart !== -1 && arrEnd > arrStart) return text.slice(arrStart, arrEnd + 1);
+  // Find outermost JSON object (might wrap array in { hunts: [...] })
+  const objStart = text.indexOf('{');
+  const objEnd   = text.lastIndexOf('}');
+  if (objStart !== -1 && objEnd > objStart) return text.slice(objStart, objEnd + 1);
+  return text.trim();
+}
+
+function normalizeAIHunts(raw, profile) {
+  const relevantActors = getRelevantThreatActors(profile).slice(0, 3);
+  // Handle wrapper objects like { hunts: [...] } or { scenarios: [...] }
+  const list = Array.isArray(raw)
+    ? raw
+    : (raw.hunts || raw.scenarios || raw.results || raw.threat_hunts || Object.values(raw)[0] || []);
+
+  return list
+    .filter(h => h && h.title)
+    .map((h, i) => {
+      const score = Math.min(100, Math.max(0, Number(h.confidence) || Number(h.relevanceScore) || 70));
+      return {
+        id:           `ai-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 6)}`,
+        templateId:   null,
+        aiGenerated:  true,
+        title:        h.title || 'Untitled Hunt',
+        hypothesis:   h.hypothesis || '',
+        whyRelevant:  h.whyRelevant || h.why_relevant || '',
+        category:     h.category || 'endpoint',
+        severity:     h.severity || 'medium',
+        difficulty:   h.difficulty || 'intermediate',
+        confidence:   score,
+        relevanceScore: score,
+        mitreTechniques:     h.mitreTechniques    || h.mitre_techniques    || [],
+        huntSteps:           h.huntSteps          || h.hunt_steps          || [],
+        exampleQueries:      h.exampleQueries     || h.example_queries     || [],
+        suspiciousBehaviors: h.suspiciousBehaviors|| h.suspicious_behaviors|| [],
+        recommendedLogSources: h.recommendedLogSources || h.recommended_log_sources || [],
+        recommendedTools:    h.recommendedTools   || h.recommended_tools   || [],
+        tags:                h.tags               || [],
+        priority:            assignPriority(score),
+        dataSourceCoverage:  computeDataSourceCoverage({ dataSources: h.recommendedLogSources || [] }, profile),
+        maturityFit:         computeMaturityFit(h.maturityRequired || 'intermediate', profile),
+        relevantThreatActors: relevantActors,
+        companyContext: {
+          name:     profile.companyName,
+          industry: profile.industry,
+          size:     profile.companySize,
+          cloud:    profile.cloudProviders,
+          siem:     profile.siemPlatform,
+          edr:      profile.edrPlatform,
+        },
+        isSaved:      false,
+        notes:        '',
+        generatedAt:  new Date().toISOString(),
+        analysisPoints: [],
+      };
+    });
+}
+
+async function generateHuntsWithAI(profile, aiSettings, options = {}) {
+  const { maxHunts = 12, categories = [] } = options;
+  const catFilter = categories.length > 0
+    ? `\nFocus ONLY on these hunt categories: ${categories.join(', ')}.`
+    : '';
+
+  const systemPrompt = `You are a senior threat hunter and detection engineer with 15+ years of SOC experience.
+Generate specific, actionable threat hunt scenarios tailored to the exact environment described.
+- Write queries specific to the SIEM/EDR platforms mentioned (use correct syntax)
+- Map every hunt to real MITRE ATT&CK technique IDs (Txxxx or Txxxx.xxx format)
+- Make every hypothesis specific to the company's actual tools and data types
+- Return ONLY a valid JSON array — no markdown, no code fences, no explanation, just the raw JSON array`;
+
+  const userPrompt = `Generate exactly ${maxHunts} threat hunt scenarios for this specific environment:
+
+Company: ${profile.companyName || 'Unknown'}
+Industry: ${profile.industry || 'Unknown'}
+Size: ${profile.companySize || 'Unknown'}
+Cloud Providers: ${(profile.cloudProviders || []).filter(c => c !== 'none').join(', ') || 'None'}
+SIEM Platform: ${profile.siemPlatform || 'Unknown'}
+EDR Platform: ${profile.edrPlatform || 'Unknown'}
+IAM / Identity: ${profile.iamPlatform || 'Unknown'}
+Email Platform: ${profile.emailPlatform || 'Unknown'}
+Email Security: ${profile.emailSecurityPlatform || 'None'}
+Infrastructure: ${profile.onPremVsCloud || 'Unknown'}
+Internet-Facing Systems: ${(profile.internetFacingSystems || []).join(', ') || 'Unknown'}
+Operating Systems: ${(profile.operatingSystems || []).join(', ') || 'Unknown'}
+Data Types Handled: ${(profile.dataTypes || []).join(', ') || 'Unknown'}
+Compliance Requirements: ${(profile.complianceRequirements || []).join(', ') || 'None'}
+Top Threat Concerns: ${(profile.topThreats || []).join(', ') || 'Unknown'}
+Known Security Gaps: ${profile.securityGaps || 'Not specified'}
+Recent Incidents: ${profile.recentIncidents || 'None'}
+Remote Work Level: ${profile.remoteWorkLevel || 'Unknown'}
+Data Sensitivity: ${profile.dataSensitivity || 'Unknown'}
+${catFilter}
+
+Return a JSON array where each element is:
+{
+  "title": "specific descriptive hunt name",
+  "hypothesis": "If [specific attacker action using their tools] then [specific observable artifact in their environment]",
+  "whyRelevant": "2-3 sentences specific to THIS company explaining why this hunt matters for their exact environment",
+  "category": "<one of: endpoint, lateral, identity, email, cloud, exfiltration, ransomware, insider, persistence, network, saas-abuse, admin-activity>",
+  "severity": "<critical | high | medium | low>",
+  "difficulty": "<beginner | intermediate | advanced | expert>",
+  "confidence": <number 0-100>,
+  "mitreTechniques": ["T1078", "T1110.003"],
+  "huntSteps": ["Step 1: ...", "Step 2: ...", "Step 3: ...", "Step 4: ...", "Step 5: ..."],
+  "exampleQueries": [
+    {
+      "platform": "${profile.siemPlatform || 'SIEM'}",
+      "language": "spl or kql or sigma or eql",
+      "query": "actual working query string for their SIEM"
+    }
+  ],
+  "suspiciousBehaviors": ["observable indicator 1", "observable indicator 2", "observable indicator 3"],
+  "recommendedLogSources": ["log source 1", "log source 2"],
+  "recommendedTools": ["tool 1", "tool 2"],
+  "tags": ["keyword1", "keyword2", "keyword3"]
+}`;
+
+  const rawText = await callAI(aiSettings, systemPrompt, userPrompt);
+  const jsonText = extractJSON(rawText);
+  const parsed = JSON.parse(jsonText);
+  return normalizeAIHunts(parsed, profile);
+}
+
 // ── Main Generation Function ──────────────────────────────────────────────────
 
 /**
@@ -254,40 +464,51 @@ function computeDataSourceCoverage(hunt, profile) {
  * @param {Object} options - Generation options (maxHunts, categories filter)
  * @returns {Array} - Array of personalized hunt objects
  */
-export async function generateHunts(profile, options = {}) {
+export async function generateHunts(profile, options = {}, aiSettings = null) {
   const { maxHunts = 12, categories = [] } = options;
 
-  // Simulate async processing (replace with actual AI call here)
+  // Try AI generation if provider + key are configured
+  const useAI = (aiSettings?.apiKey && aiSettings.provider !== 'local') || aiSettings?.provider === 'local';
+  if (useAI) {
+    try {
+      const aiHunts = await generateHuntsWithAI(profile, aiSettings, options);
+      if (aiHunts && aiHunts.length > 0) return { hunts: aiHunts, method: 'ai', provider: aiSettings.provider };
+    } catch (err) {
+      console.warn('[THG] AI generation failed, falling back to rules engine:', err.message);
+      return { hunts: await _rulesEngine(profile, options), method: 'fallback', error: err.message };
+    }
+  }
+
+  // ── Rules-based (no AI configured) ──────────────────────────────────────
+  const hunts = await _rulesEngine(profile, options);
+  return { hunts, method: 'rules' };
+}
+
+async function _rulesEngine(profile, options = {}) {
+  const { maxHunts = 12, categories = [] } = options;
   await new Promise(resolve => setTimeout(resolve, 1800));
 
   const ctx  = analyzeProfile(profile);
   const vars = buildInterpolationVars(profile);
   let templates = selectTemplates(ctx, profile);
 
-  // Apply category filter if specified
   if (categories.length > 0) {
     templates = templates.filter(t => categories.includes(t.category));
   }
 
-  // Limit to maxHunts
   const selected = templates.slice(0, maxHunts);
 
-  // Personalize each hunt
-  const hunts = selected.map(template => {
+  return selected.map(template => {
     const hunt = personalizeHunt(template, profile, ctx, vars);
     const coverageScore = computeDataSourceCoverage(hunt, profile);
     const priority = assignPriority(hunt.relevanceScore);
-
     return {
       ...hunt,
       priority,
       dataSourceCoverage: coverageScore,
-      // Computed analysis fields
       maturityFit: computeMaturityFit(template.maturityRequired, profile),
     };
   });
-
-  return hunts;
 }
 
 function computeMaturityFit(required, profile) {

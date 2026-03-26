@@ -6,21 +6,23 @@ import {
   Info, Zap, ArrowRight,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { MITREBadge } from './MITREBadge';
+import MITREBadge from './MITREBadge';
 import { getTechniqueById } from '../../data/mitreTechniques';
 import {
   exportHuntAsMarkdown, exportSingleHuntJSON, copyHuntToClipboard, copyQueryToClipboard,
 } from '../../services/exportService';
 import { HUNT_CATEGORIES } from '../../data/huntTemplates';
+import PDFCustomizer from '../export/PDFCustomizer';
 import './HuntDetail.css';
 
 const TABS = ['Overview', 'Hunt Steps', 'Queries', 'IOCs', 'Remediation', 'Notes'];
 
 export default function HuntDetail({ hunt, onClose }) {
-  const { isHuntSaved, toggleSaveHunt, addToast, dispatch } = useApp();
+  const { isHuntSaved, toggleSaveHunt, addToast, dispatch, activeCompany } = useApp();
   const [activeTab, setActiveTab] = useState('Overview');
   const [notes, setNotes]         = useState(hunt.notes || '');
   const [expanded, setExpanded]   = useState({});
+  const [showPDFCustomizer, setShowPDFCustomizer] = useState(false);
 
   if (!hunt) return null;
 
@@ -80,6 +82,9 @@ export default function HuntDetail({ hunt, onClose }) {
             </button>
             <button className="btn btn-secondary btn-sm" onClick={handleExportJSON}>
               <Download size={13} /> JSON
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowPDFCustomizer(true)}>
+              <FileText size={13} /> PDF
             </button>
             <button
               className={`btn btn-sm ${saved ? 'btn-primary' : 'btn-secondary'}`}
@@ -147,6 +152,15 @@ export default function HuntDetail({ hunt, onClose }) {
           />
         )}
       </div>
+
+      {/* PDF Customizer Modal */}
+      {showPDFCustomizer && (
+        <PDFCustomizer
+          hunt={hunt}
+          activeCompany={activeCompany}
+          onClose={() => setShowPDFCustomizer(false)}
+        />
+      )}
     </div>
   );
 }

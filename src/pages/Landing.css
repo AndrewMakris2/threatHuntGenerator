@@ -19,8 +19,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(56,189,248,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(129,140,248,0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 60% at 70% 40%, rgba(220,38,38,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 20% 80%, rgba(127,29,29,0.06) 0%, transparent 60%);
   pointer-events: none;
 }
 
@@ -36,15 +36,44 @@
   align-items: center;
   gap: var(--space-2);
   padding: 4px 12px;
-  background: rgba(129,140,248,0.12);
-  border: 1px solid rgba(129,140,248,0.3);
+  background: rgba(220,38,38,0.1);
+  border: 1px solid rgba(220,38,38,0.3);
   border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  color: var(--accent-secondary);
+  color: #fca5a5;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   width: fit-content;
+}
+
+/* ── Hero logo lockup ── */
+.landing-hero-logo-lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.landing-hero-wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  gap: 2px;
+}
+
+.landing-hero-wordmark-top {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.14em;
+}
+
+.landing-hero-wordmark-bottom {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  letter-spacing: 0.24em;
 }
 
 .landing-hero-title {
@@ -57,7 +86,7 @@
 
 .landing-hero-title-accent {
   display: block;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  background: linear-gradient(135deg, #ef4444, #7f1d1d);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

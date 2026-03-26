@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield, Crosshair, Zap, Target, ArrowRight,
-  CheckCircle, Lock, Globe, Database, Users,
-  ChevronRight, TrendingUp,
+  Crosshair, Zap, Target, ArrowRight,
+  CheckCircle, Lock, Globe, Database,
+  ChevronRight, TrendingUp, Shield,
 } from 'lucide-react';
+import { PhantomWordmark } from '../components/common/PhantomLogo';
+import PhantomLogo from '../components/common/PhantomLogo';
 import './Landing.css';
 
 const FEATURES = [
@@ -37,8 +39,16 @@ export default function Landing() {
             <span>AI-Powered Threat Intelligence</span>
           </div>
 
+          <div className="landing-hero-logo-lockup">
+            <PhantomLogo size={56} glow />
+            <div className="landing-hero-wordmark">
+              <span className="landing-hero-wordmark-top">PHANTOM</span>
+              <span className="landing-hero-wordmark-bottom">HUNTER</span>
+            </div>
+          </div>
+
           <h1 className="landing-hero-title">
-            Generate Threat Hunts
+            Precision Threat Hunts
             <span className="landing-hero-title-accent"> Built for Your Environment</span>
           </h1>
 

@@ -10,16 +10,18 @@ import './Settings.css';
 const AI_PROVIDERS = [
   { id: 'anthropic', name: 'Anthropic Claude', models: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'] },
   { id: 'openai',    name: 'OpenAI',           models: ['gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'] },
+  { id: 'groq',      name: 'Groq',             models: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'] },
   { id: 'azure',     name: 'Azure OpenAI',     models: ['gpt-4o', 'gpt-4'] },
   { id: 'local',     name: 'Local LLM (Ollama)', models: ['llama3', 'mixtral', 'mistral'] },
 ];
 
 export default function Settings() {
   const { state, dispatch, addToast } = useApp();
-  const [aiProvider,  setAiProvider]  = useState('anthropic');
-  const [aiModel,     setAiModel]     = useState('claude-sonnet-4-6');
-  const [apiKey,      setApiKey]      = useState('');
-  const [apiEndpoint, setApiEndpoint] = useState('');
+  const existingAI = state.aiSettings || {};
+  const [aiProvider,  setAiProvider]  = useState(existingAI.provider  || 'anthropic');
+  const [aiModel,     setAiModel]     = useState(existingAI.model     || 'claude-sonnet-4-6');
+  const [apiKey,      setApiKey]      = useState(existingAI.apiKey    || '');
+  const [apiEndpoint, setApiEndpoint] = useState(existingAI.endpoint  || '');
   const [saved,       setSaved]       = useState(false);
 
   const { generatedHunts, savedHunts, companyProfile } = state;
@@ -27,8 +29,11 @@ export default function Settings() {
   const selectedProvider = AI_PROVIDERS.find(p => p.id === aiProvider);
 
   function handleSaveAI() {
-    // In production, store API key securely (not in localStorage)
-    addToast('AI settings saved (keys stored in memory only)', 'success');
+    dispatch({
+      type: ACTIONS.SET_AI_SETTINGS,
+      settings: { provider: aiProvider, model: aiModel, apiKey, endpoint: apiEndpoint },
+    });
+    addToast(`${AI_PROVIDERS.find(p => p.id === aiProvider)?.name || 'AI'} settings saved`, 'success');
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -119,18 +124,30 @@ export default function Settings() {
               <div className="form-group">
                 <label className="form-label">
                   <Key size={12} style={{ display:'inline', marginRight:4 }}/>
-                  API Key
+                  {aiProvider === 'groq' ? 'Groq API Key' : aiProvider === 'anthropic' ? 'Anthropic API Key' : aiProvider === 'openai' ? 'OpenAI API Key' : 'API Key'}
                 </label>
                 <input
                   className="form-input"
                   type="password"
-                  placeholder="sk-... or your API key"
+                  placeholder={aiProvider === 'groq' ? 'gsk_...' : 'sk-... or your API key'}
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
                 />
                 <span className="form-hint">Stored in memory only — never persisted to localStorage</span>
               </div>
             </div>
+
+            {aiProvider === 'groq' && (
+              <div className="callout callout-info" style={{ marginBottom: 'var(--space-3)' }}>
+                <Info size={15} style={{ color:'var(--accent-primary)', flexShrink:0 }}/>
+                <p style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)' }}>
+                  Groq provides ultra-fast inference. Get your API key at{' '}
+                  <a href="https://console.groq.com" target="_blank" rel="noreferrer" style={{ color:'var(--accent-primary)' }}>
+                    console.groq.com <ExternalLink size={11} style={{ display:'inline', verticalAlign:'middle' }}/>
+                  </a>
+                </p>
+              </div>
+            )}
 
             {aiProvider === 'azure' && (
               <div className="form-group">
@@ -207,12 +224,12 @@ export default function Settings() {
               <Shield size={18}/>
             </div>
             <div>
-              <h2 className="section-title">About Threat Hunt Generator</h2>
+              <h2 className="section-title">About Phantom Hunter</h2>
             </div>
           </div>
           <div className="settings-about">
             <p style={{ fontSize:'var(--text-sm)', color:'var(--text-secondary)', lineHeight:1.7 }}>
-              Threat Hunt Generator is a cybersecurity analyst tool for generating environment-specific threat hunting
+              Phantom Hunter is a cybersecurity analyst tool for generating environment-specific threat hunting
               scenarios. Built with React, it uses a rules-based engine to tailor MITRE ATT&CK-mapped hunts to your
               company's actual stack, tools, and risk profile.
             </p>

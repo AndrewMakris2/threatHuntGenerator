@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
   Bookmark, BookmarkCheck, ChevronDown, ExternalLink,
-  Clock, Target, Layers, TrendingUp, AlertTriangle,
-  Shield, Database, Copy, Download,
+  Clock, TrendingUp, AlertTriangle,
+  Shield, Database, Copy, Download, Zap,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MITREList } from './MITREBadge';
@@ -66,6 +66,18 @@ export default function HuntCard({ hunt, onOpen, compact = false }) {
           {hunt.maturityFit && (
             <span className={`badge ${MATURITY_COLORS[hunt.maturityFit] || 'badge-info'}`}>
               {MATURITY_LABELS[hunt.maturityFit] || hunt.maturityFit}
+            </span>
+          )}
+          {hunt.aiGenerated && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 3,
+              padding: '2px 7px', borderRadius: 99,
+              background: 'rgba(129,140,248,0.12)',
+              border: '1px solid rgba(129,140,248,0.3)',
+              fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em',
+              color: '#a5b4fc',
+            }}>
+              <Zap size={9} /> AI
             </span>
           )}
         </div>

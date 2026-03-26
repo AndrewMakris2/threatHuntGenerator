@@ -2,9 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Crosshair, Search, SlidersHorizontal, X, Download,
-  FileText, FileJson, Printer, Sparkles, Filter,
+  FileText, FileJson, Printer, Sparkles, Filter, Trash2,
 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import { useApp, ACTIONS } from '../context/AppContext';
 import HuntCard from '../components/hunt/HuntCard';
 import HuntDetail from '../components/hunt/HuntDetail';
 import Modal from '../components/common/Modal';
@@ -17,7 +17,8 @@ const SEVERITY_OPTS   = ['critical','high','medium','low'];
 const DIFFICULTY_OPTS = ['beginner','intermediate','advanced','expert'];
 
 export default function HuntResults() {
-  const { state, addToast } = useApp();
+  const { state, dispatch, addToast } = useApp();
+  const [confirmClear, setConfirmClear] = useState(false);
   const navigate = useNavigate();
   const { generatedHunts: hunts, companyProfile: profile } = state;
 
@@ -87,6 +88,14 @@ export default function HuntResults() {
           <button className="btn btn-secondary btn-sm" onClick={handleExportPDF}><Printer size={13}/> PDF</button>
           <button className="btn btn-primary btn-sm" onClick={() => navigate('/generate')}>
             <Sparkles size={13}/> Regenerate
+          </button>
+          <button
+            className="btn btn-sm"
+            onClick={() => setConfirmClear(true)}
+            style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.25)', background: 'transparent' }}
+            title="Clear hunt history"
+          >
+            <Trash2 size={13}/> Clear
           </button>
         </div>
       </div>
@@ -181,6 +190,56 @@ export default function HuntResults() {
       <Modal open={!!activeHunt} onClose={() => setActiveHunt(null)} size="xl" noPadding>
         {activeHunt && <HuntDetail hunt={activeHunt} onClose={() => setActiveHunt(null)} />}
       </Modal>
+
+      {/* Clear history confirm */}
+      {confirmClear && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1rem',
+        }}>
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 16,
+            padding: '2rem',
+            maxWidth: 380,
+            width: '100%',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%',
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 1rem',
+            }}>
+              <Trash2 size={22} color="#ef4444" />
+            </div>
+            <h3 style={{ color: 'var(--text-primary)', margin: '0 0 8px', fontSize: '1rem' }}>
+              Clear Hunt History?
+            </h3>
+            <p style={{ color: 'var(--text-muted)', margin: '0 0 1.5rem', fontSize: '0.85rem', lineHeight: 1.6 }}>
+              All {hunts.length} generated hunts will be removed. Saved hunts in your library are not affected.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button className="btn btn-ghost" onClick={() => setConfirmClear(false)}>Cancel</button>
+              <button
+                className="btn"
+                style={{ background: '#dc2626', color: '#fff', border: 'none' }}
+                onClick={() => {
+                  dispatch({ type: ACTIONS.CLEAR_HUNTS });
+                  addToast('Hunt history cleared', 'info');
+                  setConfirmClear(false);
+                }}
+              >
+                Clear History
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

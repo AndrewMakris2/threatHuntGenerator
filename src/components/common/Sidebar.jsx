@@ -1,9 +1,9 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Building2, Crosshair, ListChecks,
-  BookmarkCheck, Settings, ChevronRight, Target,
-  Sparkles, TrendingUp, HelpCircle, ExternalLink,
+  LayoutDashboard, Building2, Crosshair,
+  BookmarkCheck, Settings, Target,
+  Sparkles, TrendingUp,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../../context/AppContext';
 import './Sidebar.css';
@@ -12,21 +12,21 @@ const NAV_ITEMS = [
   {
     section: 'Overview',
     items: [
-      { to: '/',         icon: LayoutDashboard, label: 'Dashboard',       end: true },
+      { to: '/',           icon: LayoutDashboard, label: 'Dashboard',      end: true },
     ],
   },
   {
     section: 'Hunt Workflow',
     items: [
-      { to: '/profile',  icon: Building2,       label: 'Company Profile' },
-      { to: '/generate', icon: Sparkles,         label: 'Hunt Generator'  },
-      { to: '/results',  icon: Crosshair,        label: 'Hunt Results'    },
+      { to: '/companies',  icon: Building2,       label: 'Companies'       },
+      { to: '/generate',   icon: Sparkles,         label: 'Hunt Generator' },
+      { to: '/results',    icon: Crosshair,        label: 'Hunt Results'   },
     ],
   },
   {
     section: 'Library',
     items: [
-      { to: '/saved',    icon: BookmarkCheck,    label: 'Saved Hunts'     },
+      { to: '/saved',      icon: BookmarkCheck,    label: 'Saved Hunts'    },
     ],
   },
   {
@@ -38,14 +38,15 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { state, dispatch } = useApp();
+  const { state, dispatch, activeCompany } = useApp();
   const collapsed = state.sidebarCollapsed;
   const navigate = useNavigate();
 
   const profile = state.companyProfile;
-  const companyName = profile?.companyName;
+  const companyName = activeCompany?.companyName || profile?.companyName;
   const huntCount   = state.generatedHunts.length;
   const savedCount  = state.savedHunts.length;
+  const brandColor  = activeCompany?.brandColor || 'var(--accent-primary)';
 
   return (
     <>
@@ -60,18 +61,21 @@ export default function Sidebar() {
       <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         {/* Profile summary */}
         {!collapsed && (
-          <div className="sidebar-profile">
-            <div className="sidebar-profile-icon">
-              <Target size={18} />
+          <div className="sidebar-profile" style={{ borderColor: activeCompany ? `${brandColor}40` : undefined }}>
+            <div className="sidebar-profile-icon" style={{ background: activeCompany ? `${brandColor}20` : undefined, color: brandColor }}>
+              {activeCompany
+                ? <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{companyName?.[0]?.toUpperCase() || <Target size={18} />}</span>
+                : <Target size={18} />
+              }
             </div>
             <div className="sidebar-profile-info">
               <div className="sidebar-profile-name">
-                {companyName || 'No Profile'}
+                {companyName || 'No Company'}
               </div>
               <div className="sidebar-profile-meta">
-                {huntCount > 0
-                  ? `${huntCount} hunts generated`
-                  : 'Set up company profile'}
+                {activeCompany
+                  ? (huntCount > 0 ? `${huntCount} hunts generated` : activeCompany.industry || 'Active profile')
+                  : 'Select a company'}
               </div>
             </div>
           </div>
@@ -89,7 +93,7 @@ export default function Sidebar() {
                   key={item.to}
                   item={item}
                   collapsed={collapsed}
-                  savedCount={item.to === '/saved' ? savedCount : undefined}
+                  savedCount={item.to === '/saved' ? savedCount : item.to === '/companies' ? state.savedCompanies.length : undefined}
                   huntCount={item.to === '/results' ? huntCount : undefined}
                 />
               ))}
@@ -127,7 +131,7 @@ export default function Sidebar() {
         {/* Footer */}
         {!collapsed && (
           <div className="sidebar-footer">
-            <div className="sidebar-footer-version">ThreatHunt Generator v1.0</div>
+            <div className="sidebar-footer-version">Phantom Hunter v1.0</div>
           </div>
         )}
       </aside>
