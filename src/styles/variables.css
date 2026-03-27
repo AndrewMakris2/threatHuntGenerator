@@ -1,50 +1,50 @@
 /* ============================================================
    Design System Variables — Phantom Hunter
-   Midnight teal/cyan cybersecurity theme
+   Red / Dark Grey / White — Operator Theme
    ============================================================ */
 
 :root {
   /* ── Background Layers ── */
-  --bg-base:        #060d0f;
-  --bg-surface:     #091419;
-  --bg-card:        #0d1e24;
-  --bg-secondary:   #0d1e24;
-  --bg-tertiary:    #132830;
-  --bg-card-hover:  #172e38;
-  --bg-elevated:    #1a3540;
-  --bg-hover:       #172e38;
-  --bg-overlay:     rgba(0,0,0,0.85);
+  --bg-base:        #0a0a0a;
+  --bg-surface:     #111111;
+  --bg-card:        #161616;
+  --bg-secondary:   #161616;
+  --bg-tertiary:    #1e1e1e;
+  --bg-card-hover:  #1e1e1e;
+  --bg-elevated:    #252525;
+  --bg-hover:       #1a1a1a;
+  --bg-overlay:     rgba(0,0,0,0.88);
 
   /* ── Border ── */
-  --border-subtle:  rgba(20,184,166,0.08);
-  --border-default: rgba(20,184,166,0.15);
-  --border-strong:  rgba(20,184,166,0.26);
-  --border-accent:  rgba(20,184,166,0.42);
+  --border-subtle:  rgba(255,255,255,0.05);
+  --border-default: rgba(255,255,255,0.09);
+  --border-strong:  rgba(255,255,255,0.16);
+  --border-accent:  rgba(220,38,38,0.5);
 
   /* ── Brand / Accent ── */
-  --accent-primary:   #14b8a6;
-  --accent-secondary: #22d3ee;
-  --accent-cyan:      #06b6d4;
-  --accent-glow:      rgba(20,184,166,0.12);
+  --accent-primary:   #dc2626;
+  --accent-secondary: #ef4444;
+  --accent-cyan:      #f87171;
+  --accent-glow:      rgba(220,38,38,0.10);
 
   /* ── Severity / Status ── */
   --severity-critical: #f43f5e;
   --severity-high:     #fb923c;
   --severity-medium:   #facc15;
-  --severity-low:      #34d399;
-  --severity-info:     #38bdf8;
+  --severity-low:      #4ade80;
+  --severity-info:     #60a5fa;
 
-  --status-success: #34d399;
+  --status-success: #4ade80;
   --status-warning: #facc15;
   --status-error:   #f43f5e;
-  --status-info:    #38bdf8;
+  --status-info:    #60a5fa;
 
   /* ── Text ── */
-  --text-primary:   #f0fafa;
-  --text-secondary: #94a3b8;
-  --text-muted:     #476069;
-  --text-accent:    #22d3ee;
-  --text-inverse:   #060d0f;
+  --text-primary:   #ffffff;
+  --text-secondary: #a3a3a3;
+  --text-muted:     #525252;
+  --text-accent:    #f87171;
+  --text-inverse:   #0a0a0a;
 
   /* ── Typography ── */
   --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -77,20 +77,20 @@
   --space-16: 4rem;
 
   /* ── Radius ── */
-  --radius-sm:   0.3rem;
-  --radius-md:   0.5rem;
-  --radius-lg:   0.75rem;
-  --radius-xl:   1rem;
-  --radius-2xl:  1.375rem;
+  --radius-sm:   0.25rem;
+  --radius-md:   0.4rem;
+  --radius-lg:   0.6rem;
+  --radius-xl:   0.75rem;
+  --radius-2xl:  1rem;
   --radius-full: 9999px;
 
   /* ── Shadows ── */
-  --shadow-sm:  0 1px 4px rgba(0,0,0,0.4);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
-  --shadow-xl:  0 16px 48px rgba(0,0,0,0.7);
-  --shadow-glow:        0 0 24px rgba(20,184,166,0.12);
-  --shadow-glow-strong: 0 0 40px rgba(20,184,166,0.22);
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.5);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.6);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.7);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.8);
+  --shadow-glow:        0 0 24px rgba(220,38,38,0.12);
+  --shadow-glow-strong: 0 0 40px rgba(220,38,38,0.22);
 
   /* ── Transitions ── */
   --transition-fast:   120ms ease;
@@ -105,7 +105,7 @@
   --z-toast:    1080;
 
   /* ── Layout ── */
-  --sidebar-width:           220px;
-  --sidebar-collapsed-width:  52px;
-  --navbar-height:            52px;
+  --sidebar-width:           232px;
+  --sidebar-collapsed-width:  56px;
+  --navbar-height:            54px;
 }
