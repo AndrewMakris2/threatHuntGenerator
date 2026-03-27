@@ -283,18 +283,23 @@ function appReducer(state, action) {
         filters: initialState.filters,
       };
 
-    case ACTIONS.LOAD_FROM_DB:
+    case ACTIONS.LOAD_FROM_DB: {
+      // Only overwrite local data if Firestore actually returned records.
+      // An empty Firestore result means the data hasn't synced yet — don't clobber localStorage.
+      const companies   = action.companies?.length   > 0 ? action.companies   : state.savedCompanies;
+      const savedHunts  = action.savedHunts?.length  > 0 ? action.savedHunts  : state.savedHunts;
+      const huntSessions = action.huntSessions?.length > 0 ? action.huntSessions : state.huntSessions;
+      const activeId = companies.find(c => c.id === state.activeCompanyId)
+        ? state.activeCompanyId
+        : companies[0]?.id ?? state.activeCompanyId;
       return {
         ...state,
-        savedCompanies: action.companies ?? state.savedCompanies,
-        savedHunts: action.savedHunts ?? state.savedHunts,
-        huntSessions: action.huntSessions ?? state.huntSessions,
-        activeCompanyId: action.companies?.length > 0
-          ? (state.activeCompanyId && action.companies.find(c => c.id === state.activeCompanyId)
-              ? state.activeCompanyId
-              : action.companies[0]?.id)
-          : state.activeCompanyId,
+        savedCompanies: companies,
+        savedHunts,
+        huntSessions,
+        activeCompanyId: activeId,
       };
+    }
 
     default:
       return state;
@@ -355,7 +360,13 @@ export function AppProvider({ children }) {
   }, []);
 
   // Sync a single action to cloud — gets current user from Firebase auth directly
-  const syncDispatch = useCallback(async (action) => {
+  const syncDispatch = useCallback(async (incomingAction) => {
+    // Pre-generate the company ID BEFORE dispatch so localStorage and Firestore use the same ID
+    let action = incomingAction;
+    if (action.type === ACTIONS.SAVE_COMPANY && !action.company?.id) {
+      action = { ...action, company: { ...action.company, id: `co-${Date.now()}` } };
+    }
+
     dispatch(action);
     if (!isSupabaseEnabled) return;
     const uid = auth?.currentUser?.uid;
@@ -363,8 +374,7 @@ export function AppProvider({ children }) {
     try {
       switch (action.type) {
         case ACTIONS.SAVE_COMPANY: {
-          const company = { ...action.company, id: action.company.id || `co-${Date.now()}` };
-          await dbSaveCompany(uid, company);
+          await dbSaveCompany(uid, action.company);
           break;
         }
         case ACTIONS.UPDATE_COMPANY:
