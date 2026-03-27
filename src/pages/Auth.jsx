@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Mail, Lock, LogIn, UserPlus, Chrome, Eye, EyeOff, Zap } from 'lucide-react';
+import { Shield, Mail, Lock, LogIn, UserPlus, Eye, EyeOff, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
@@ -165,7 +165,7 @@ export default function Auth() {
 
         {/* Google */}
         <button className="auth-google-btn" onClick={handleGoogle} disabled={loading}>
-          <Chrome size={16} />
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.93V17h2v-.07C15.72 16.52 18 14.47 18 12c0-3.31-2.69-6-6-6s-6 2.69-6 6c0 2.47 2.28 4.52 5 4.93zM12 8c2.21 0 4 1.79 4 4s-1.79 4-4 4-4-1.79-4-4 1.79-4 4-4z"/></svg>
           Continue with Google
         </button>
 
