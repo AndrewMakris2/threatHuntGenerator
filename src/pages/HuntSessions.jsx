@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   History, Trash2, ChevronDown, Building2,
-  Zap, Calendar, Target, Cpu, X,
+  Zap, Calendar, Target, Cpu,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../context/AppContext';
 import HuntCard from '../components/hunt/HuntCard';
