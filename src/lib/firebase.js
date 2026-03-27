@@ -3,18 +3,16 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey:            process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain:        process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId:         process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket:     process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId:             process.env.REACT_APP_FIREBASE_APP_ID,
+  apiKey:            'AIzaSyDjGXv88H8DOb92mJvNDBj40jYBd0XZTRg',
+  authDomain:        'phantomhunter-84af3.firebaseapp.com',
+  projectId:         'phantomhunter-84af3',
+  storageBucket:     'phantomhunter-84af3.firebasestorage.app',
+  messagingSenderId: '859706943580',
+  appId:             '1:859706943580:web:9baff3b84eb4d91901de99',
+  measurementId:     'G-JMPND9NHN5',
 };
 
-// Firebase is enabled only when env vars are present
-export const isFirebaseEnabled = Boolean(
-  firebaseConfig.apiKey && firebaseConfig.projectId
-);
+export const isFirebaseEnabled = true;
 
 let app, auth, db;
 
