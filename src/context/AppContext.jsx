@@ -3,6 +3,8 @@
  * Manages company profile, generated hunts, saved hunts, companies, and UI state
  */
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import { isFirebaseEnabled as isSupabaseEnabled } from '../lib/firebase';
+import { dbLoadCompanies, dbSaveCompany, dbDeleteCompany, dbLoadSavedHunts, dbSaveHunt, dbUnsaveHunt } from '../lib/db';
 import { EMPTY_COMPANY_PROFILE } from '../data/sampleData';
 
 // ── Initial State ─────────────────────────────────────────────────────────────
@@ -81,6 +83,9 @@ export const ACTIONS = {
   REMOVE_TOAST:          'REMOVE_TOAST',
   SET_FILTER:            'SET_FILTER',
   RESET_FILTERS:         'RESET_FILTERS',
+
+  // Cloud sync
+  LOAD_FROM_DB:          'LOAD_FROM_DB',
 };
 
 // ── Reducer ───────────────────────────────────────────────────────────────────
@@ -254,6 +259,18 @@ function appReducer(state, action) {
         filters: initialState.filters,
       };
 
+    case ACTIONS.LOAD_FROM_DB:
+      return {
+        ...state,
+        savedCompanies: action.companies ?? state.savedCompanies,
+        savedHunts: action.savedHunts ?? state.savedHunts,
+        activeCompanyId: action.companies?.length > 0
+          ? (state.activeCompanyId && action.companies.find(c => c.id === state.activeCompanyId)
+              ? state.activeCompanyId
+              : action.companies[0]?.id)
+          : state.activeCompanyId,
+      };
+
     default:
       return state;
   }
@@ -293,6 +310,53 @@ export function AppProvider({ children }) {
     : initialState;
 
   const [state, dispatch] = useReducer(appReducer, merged);
+
+  // Load from cloud when user logs in
+  const syncFromCloud = useCallback(async (user) => {
+    if (!user || !isSupabaseEnabled) return;
+    const uid = user.uid || user.id; // Firebase uses uid, fallback for compat
+    try {
+      const [companies, savedHunts] = await Promise.all([
+        dbLoadCompanies(uid),
+        dbLoadSavedHunts(uid),
+      ]);
+      dispatch({ type: ACTIONS.LOAD_FROM_DB, companies, savedHunts });
+    } catch (err) {
+      console.warn('[THG] Cloud sync failed:', err.message);
+    }
+  }, []);
+
+  // Sync a single action to cloud
+  const syncDispatch = useCallback(async (action, user) => {
+    dispatch(action);
+    if (!user || !isSupabaseEnabled) return;
+    const uid = user.uid || user.id;
+    try {
+      switch (action.type) {
+        case ACTIONS.SAVE_COMPANY: {
+          const company = { ...action.company, id: action.company.id || `co-${Date.now()}` };
+          await dbSaveCompany(uid, company);
+          break;
+        }
+        case ACTIONS.UPDATE_COMPANY:
+          await dbSaveCompany(uid, action.company);
+          break;
+        case ACTIONS.DELETE_COMPANY:
+          await dbDeleteCompany(action.companyId, uid);
+          break;
+        case ACTIONS.SAVE_HUNT:
+          await dbSaveHunt(uid, action.hunt);
+          break;
+        case ACTIONS.UNSAVE_HUNT:
+          await dbUnsaveHunt(action.huntId, uid);
+          break;
+        default:
+          break;
+      }
+    } catch (err) {
+      console.warn('[THG] Sync failed for action', action.type, err.message);
+    }
+  }, []);
 
   // Persist key slices to localStorage on change
   useEffect(() => {
@@ -344,7 +408,7 @@ export function AppProvider({ children }) {
   const activeCompany = state.savedCompanies.find(c => c.id === state.activeCompanyId) || null;
 
   return (
-    <AppContext.Provider value={{ state, dispatch, addToast, isHuntSaved, toggleSaveHunt, activeCompany }}>
+    <AppContext.Provider value={{ state, dispatch, addToast, isHuntSaved, toggleSaveHunt, activeCompany, syncFromCloud, syncDispatch }}>
       {children}
     </AppContext.Provider>
   );

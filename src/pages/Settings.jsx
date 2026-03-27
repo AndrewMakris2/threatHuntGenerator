@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Settings as SettingsIcon, Zap, Trash2, Download, RotateCcw,
   Key, Globe, Shield, Database, Info, ExternalLink, CheckCircle,
+  User, Cloud, CloudOff, LogOut,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { exportHuntsAsJSON } from '../services/exportService';
 import './Settings.css';
 
@@ -17,6 +20,7 @@ const AI_PROVIDERS = [
 
 export default function Settings() {
   const { state, dispatch, addToast } = useApp();
+  const { user, signOut, isSupabaseEnabled } = useAuth();
   const existingAI = state.aiSettings || {};
   const [aiProvider,  setAiProvider]  = useState(existingAI.provider  || 'anthropic');
   const [aiModel,     setAiModel]     = useState(existingAI.model     || 'claude-sonnet-4-6');
@@ -76,6 +80,76 @@ export default function Settings() {
       </div>
 
       <div className="settings-layout">
+        {/* ── Account ── */}
+        <section className="card settings-section">
+          <div className="settings-section-header">
+            <div className="settings-section-icon" style={{ background: 'rgba(220,38,38,0.12)', color: 'var(--accent-primary)' }}>
+              <User size={18} />
+            </div>
+            <div>
+              <h2 className="section-title">Account</h2>
+              <p className="page-subtitle">
+                {isSupabaseEnabled ? 'Cloud sync enabled' : 'Running in offline / local mode'}
+              </p>
+            </div>
+            {isSupabaseEnabled ? (
+              <div className="navbar-sync-badge navbar-sync-online" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: '12px', color: 'var(--status-success)' }}>
+                <Cloud size={14} /> Syncing
+              </div>
+            ) : (
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: '12px', color: 'var(--text-muted)' }}>
+                <CloudOff size={14} /> Offline
+              </div>
+            )}
+          </div>
+
+          {isSupabaseEnabled && user ? (
+            <div className="settings-account-info">
+              <div className="settings-account-row">
+                <span className="settings-account-label">Email</span>
+                <span className="settings-account-value">{user.email}</span>
+              </div>
+              <div className="settings-account-row">
+                <span className="settings-account-label">Member Since</span>
+                <span className="settings-account-value">
+                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
+                </span>
+              </div>
+              <div className="settings-account-row">
+                <span className="settings-account-label">Sync Status</span>
+                <span className="settings-account-value" style={{ color: 'var(--status-success)' }}>
+                  ● Active — data syncs across devices
+                </span>
+              </div>
+              <div style={{ marginTop: 'var(--space-4)' }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={async () => { try { await signOut(); } catch (e) { addToast('Sign out failed', 'error'); } }}
+                >
+                  <LogOut size={13} /> Sign Out
+                </button>
+              </div>
+            </div>
+          ) : isSupabaseEnabled ? (
+            <div className="callout callout-info">
+              <Info size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)' }}>
+                  Sign in to sync your companies and saved hunts across devices.
+                </p>
+                <Link to="/auth" className="btn btn-primary btn-sm">Sign In / Create Account</Link>
+              </div>
+            </div>
+          ) : (
+            <div className="callout callout-info">
+              <Info size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                Cloud sync is disabled. Add your Firebase environment variables (<code>REACT_APP_FIREBASE_API_KEY</code>, <code>REACT_APP_FIREBASE_PROJECT_ID</code>, etc.) to enable account sign-in and cross-device sync.
+              </p>
+            </div>
+          )}
+        </section>
+
         {/* ── AI Integration ── */}
         <section className="card settings-section">
           <div className="settings-section-header">

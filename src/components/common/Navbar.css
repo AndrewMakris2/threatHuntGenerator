@@ -290,3 +290,32 @@
 .navbar-dropdown-item:hover { background: rgba(255,255,255,0.03); color: var(--text-primary); }
 .navbar-dropdown-logout { color: var(--severity-critical); }
 .navbar-dropdown-logout:hover { background: rgba(239,68,68,0.06); }
+.navbar-dropdown-offline { color: var(--text-muted); cursor: default; }
+.navbar-dropdown-offline:hover { background: transparent; color: var(--text-muted); }
+
+/* ── Avatar with initials ── */
+.navbar-avatar-initials {
+  background: linear-gradient(135deg, #dc2626, #7f1d1d);
+}
+.navbar-avatar-letter {
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+
+/* ── Sync status badge ── */
+.navbar-sync-badge {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+.navbar-sync-online {
+  color: var(--status-success);
+}
+.navbar-sync-offline {
+  color: var(--text-muted);
+}

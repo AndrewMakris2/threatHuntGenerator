@@ -50,3 +50,34 @@
 
 .settings-about { display: flex; flex-direction: column; gap: var(--space-3); }
 .settings-about-meta { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* ── Account section ── */
+.settings-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.settings-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.settings-account-label {
+  color: var(--text-muted);
+  font-weight: var(--font-medium);
+  flex-shrink: 0;
+}
+
+.settings-account-value {
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-all;
+}
