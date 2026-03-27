@@ -12,7 +12,7 @@ import { useApp, ACTIONS } from '../context/AppContext';
 import CompanyModal from '../components/company/CompanyModal';
 
 export default function Companies() {
-  const { state, dispatch, addToast, activeCompany } = useApp();
+  const { state, dispatch, syncDispatch, addToast, activeCompany } = useApp();
   const { savedCompanies, activeCompanyId } = state;
 
   const [search, setSearch] = useState('');
@@ -37,10 +37,10 @@ export default function Companies() {
 
   function handleSave(company) {
     if (company.id) {
-      dispatch({ type: ACTIONS.UPDATE_COMPANY, company });
+      syncDispatch({ type: ACTIONS.UPDATE_COMPANY, company });
       addToast(`${company.companyName} updated`, 'success');
     } else {
-      dispatch({ type: ACTIONS.SAVE_COMPANY, company });
+      syncDispatch({ type: ACTIONS.SAVE_COMPANY, company });
       addToast(`${company.companyName} saved`, 'success');
     }
     setModalOpen(false);
@@ -53,7 +53,7 @@ export default function Companies() {
 
   function handleDelete(companyId) {
     const c = savedCompanies.find(x => x.id === companyId);
-    dispatch({ type: ACTIONS.DELETE_COMPANY, companyId });
+    syncDispatch({ type: ACTIONS.DELETE_COMPANY, companyId });
     addToast(`${c?.companyName} deleted`, 'info');
     setConfirmDelete(null);
   }

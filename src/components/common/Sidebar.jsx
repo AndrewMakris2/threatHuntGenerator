@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Crosshair,
   BookmarkCheck, Settings, Target,
-  Sparkles, TrendingUp,
+  Sparkles, TrendingUp, History,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../../context/AppContext';
 import './Sidebar.css';
@@ -26,7 +26,8 @@ const NAV_ITEMS = [
   {
     section: 'Library',
     items: [
-      { to: '/saved',      icon: BookmarkCheck,    label: 'Saved Hunts'    },
+      { to: '/saved',    icon: BookmarkCheck, label: 'Saved Hunts'  },
+      { to: '/history',  icon: History,       label: 'Hunt History' },
     ],
   },
   {
@@ -93,7 +94,7 @@ export default function Sidebar() {
                   key={item.to}
                   item={item}
                   collapsed={collapsed}
-                  savedCount={item.to === '/saved' ? savedCount : item.to === '/companies' ? state.savedCompanies.length : undefined}
+                  savedCount={item.to === '/saved' ? savedCount : item.to === '/companies' ? state.savedCompanies.length : item.to === '/history' ? state.huntSessions?.length : undefined}
                   huntCount={item.to === '/results' ? huntCount : undefined}
                 />
               ))}

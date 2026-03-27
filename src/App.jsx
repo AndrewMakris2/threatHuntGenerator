@@ -15,6 +15,7 @@ import CompanyProfile from './pages/CompanyProfile';
 import HuntGenerator  from './pages/HuntGenerator';
 import HuntResults    from './pages/HuntResults';
 import SavedHunts     from './pages/SavedHunts';
+import HuntSessions   from './pages/HuntSessions';
 import Settings       from './pages/Settings';
 import Auth           from './pages/Auth';
 
@@ -120,6 +121,11 @@ export default function App() {
             <Route path="/saved" element={
               <ProtectedRoute>
                 <AppShell><SavedHunts /></AppShell>
+              </ProtectedRoute>
+            } />
+            <Route path="/history" element={
+              <ProtectedRoute>
+                <AppShell><HuntSessions /></AppShell>
               </ProtectedRoute>
             } />
             <Route path="/settings" element={

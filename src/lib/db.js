@@ -44,6 +44,24 @@ export async function dbUnsaveHunt(huntId, userId) {
   await deleteDoc(ref);
 }
 
+// ── Hunt Sessions ─────────────────────────────────────────────────────────────
+
+export async function dbLoadSessions(userId) {
+  const ref = collection(db, 'users', userId, 'huntSessions');
+  const snap = await getDocs(query(ref, orderBy('generatedAt', 'desc')));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+}
+
+export async function dbSaveSession(userId, session) {
+  const ref = doc(db, 'users', userId, 'huntSessions', session.id);
+  await setDoc(ref, { ...session }, { merge: true });
+}
+
+export async function dbDeleteSession(sessionId, userId) {
+  const ref = doc(db, 'users', userId, 'huntSessions', sessionId);
+  await deleteDoc(ref);
+}
+
 // ── User Settings ─────────────────────────────────────────────────────────────
 
 export async function dbLoadSettings(userId) {

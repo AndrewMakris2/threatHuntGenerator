@@ -3,8 +3,8 @@
  * Manages company profile, generated hunts, saved hunts, companies, and UI state
  */
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import { isFirebaseEnabled as isSupabaseEnabled } from '../lib/firebase';
-import { dbLoadCompanies, dbSaveCompany, dbDeleteCompany, dbLoadSavedHunts, dbSaveHunt, dbUnsaveHunt } from '../lib/db';
+import { auth, isFirebaseEnabled as isSupabaseEnabled } from '../lib/firebase';
+import { dbLoadCompanies, dbSaveCompany, dbDeleteCompany, dbLoadSavedHunts, dbSaveHunt, dbUnsaveHunt, dbSaveSession, dbLoadSessions, dbDeleteSession } from '../lib/db';
 import { EMPTY_COMPANY_PROFILE } from '../data/sampleData';
 
 // ── Initial State ─────────────────────────────────────────────────────────────
@@ -21,6 +21,9 @@ const initialState = {
 
   // Saved hunts library
   savedHunts: [],
+
+  // Hunt sessions (history of each generation run)
+  huntSessions: [],
 
   // Active hunt (for detail view)
   activeHunt: null,
@@ -83,6 +86,11 @@ export const ACTIONS = {
   REMOVE_TOAST:          'REMOVE_TOAST',
   SET_FILTER:            'SET_FILTER',
   RESET_FILTERS:         'RESET_FILTERS',
+
+  // Hunt sessions
+  ADD_HUNT_SESSION:      'ADD_HUNT_SESSION',
+  DELETE_HUNT_SESSION:   'DELETE_HUNT_SESSION',
+  CLEAR_HUNT_SESSIONS:   'CLEAR_HUNT_SESSIONS',
 
   // Cloud sync
   LOAD_FROM_DB:          'LOAD_FROM_DB',
@@ -171,6 +179,22 @@ function appReducer(state, action) {
           h.id === action.huntId ? { ...h, notes: action.notes } : h
         ),
       };
+
+    // ── Hunt Sessions ─────────────────────────────────────────────────────
+    case ACTIONS.ADD_HUNT_SESSION:
+      return {
+        ...state,
+        huntSessions: [action.session, ...state.huntSessions],
+      };
+
+    case ACTIONS.DELETE_HUNT_SESSION:
+      return {
+        ...state,
+        huntSessions: state.huntSessions.filter(s => s.id !== action.sessionId),
+      };
+
+    case ACTIONS.CLEAR_HUNT_SESSIONS:
+      return { ...state, huntSessions: [] };
 
     // ── Company Profiles ───────────────────────────────────────────────────
     case ACTIONS.SAVE_COMPANY: {
@@ -264,6 +288,7 @@ function appReducer(state, action) {
         ...state,
         savedCompanies: action.companies ?? state.savedCompanies,
         savedHunts: action.savedHunts ?? state.savedHunts,
+        huntSessions: action.huntSessions ?? state.huntSessions,
         activeCompanyId: action.companies?.length > 0
           ? (state.activeCompanyId && action.companies.find(c => c.id === state.activeCompanyId)
               ? state.activeCompanyId
@@ -295,6 +320,7 @@ function loadPersistedState() {
       lastGeneratedAt: saved.lastGeneratedAt || null,
       savedCompanies: saved.savedCompanies || [],
       activeCompanyId: saved.activeCompanyId || null,
+      huntSessions: saved.huntSessions || [],
       aiSettings: saved.aiSettings ? { provider: saved.aiSettings.provider || 'anthropic', model: saved.aiSettings.model || '', endpoint: saved.aiSettings.endpoint || '' } : { provider: 'anthropic', model: '', endpoint: '' },
     };
   } catch {
@@ -313,24 +339,27 @@ export function AppProvider({ children }) {
 
   // Load from cloud when user logs in
   const syncFromCloud = useCallback(async (user) => {
-    if (!user || !isSupabaseEnabled) return;
-    const uid = user.uid || user.id; // Firebase uses uid, fallback for compat
+    if (!isSupabaseEnabled) return;
+    const uid = user?.uid || user?.id || auth?.currentUser?.uid;
+    if (!uid) return;
     try {
-      const [companies, savedHunts] = await Promise.all([
+      const [companies, savedHunts, huntSessions] = await Promise.all([
         dbLoadCompanies(uid),
         dbLoadSavedHunts(uid),
+        dbLoadSessions(uid),
       ]);
-      dispatch({ type: ACTIONS.LOAD_FROM_DB, companies, savedHunts });
+      dispatch({ type: ACTIONS.LOAD_FROM_DB, companies, savedHunts, huntSessions });
     } catch (err) {
       console.warn('[THG] Cloud sync failed:', err.message);
     }
   }, []);
 
-  // Sync a single action to cloud
-  const syncDispatch = useCallback(async (action, user) => {
+  // Sync a single action to cloud — gets current user from Firebase auth directly
+  const syncDispatch = useCallback(async (action) => {
     dispatch(action);
-    if (!user || !isSupabaseEnabled) return;
-    const uid = user.uid || user.id;
+    if (!isSupabaseEnabled) return;
+    const uid = auth?.currentUser?.uid;
+    if (!uid) return;
     try {
       switch (action.type) {
         case ACTIONS.SAVE_COMPANY: {
@@ -349,6 +378,12 @@ export function AppProvider({ children }) {
           break;
         case ACTIONS.UNSAVE_HUNT:
           await dbUnsaveHunt(action.huntId, uid);
+          break;
+        case ACTIONS.ADD_HUNT_SESSION:
+          await dbSaveSession(uid, action.session);
+          break;
+        case ACTIONS.DELETE_HUNT_SESSION:
+          await dbDeleteSession(action.sessionId, uid);
           break;
         default:
           break;
@@ -369,6 +404,7 @@ export function AppProvider({ children }) {
         lastGeneratedAt: state.lastGeneratedAt,
         savedCompanies: state.savedCompanies,
         activeCompanyId: state.activeCompanyId,
+        huntSessions: state.huntSessions,
         aiSettings: { provider: state.aiSettings.provider, model: state.aiSettings.model, endpoint: state.aiSettings.endpoint },
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -376,7 +412,7 @@ export function AppProvider({ children }) {
   }, [
     state.companyProfile, state.profileComplete, state.savedHunts,
     state.generatedHunts, state.lastGeneratedAt,
-    state.savedCompanies, state.activeCompanyId, state.aiSettings,
+    state.savedCompanies, state.activeCompanyId, state.aiSettings, state.huntSessions,
   ]);
 
   // ── Helper actions ───────────────────────────────────────────────────────
@@ -394,14 +430,14 @@ export function AppProvider({ children }) {
   const toggleSaveHunt = useCallback(
     (hunt) => {
       if (isHuntSaved(hunt.id)) {
-        dispatch({ type: ACTIONS.UNSAVE_HUNT, huntId: hunt.id });
+        syncDispatch({ type: ACTIONS.UNSAVE_HUNT, huntId: hunt.id });
         addToast('Hunt removed from library', 'info');
       } else {
-        dispatch({ type: ACTIONS.SAVE_HUNT, hunt });
+        syncDispatch({ type: ACTIONS.SAVE_HUNT, hunt });
         addToast('Hunt saved to library', 'success');
       }
     },
-    [isHuntSaved, addToast]
+    [isHuntSaved, addToast, syncDispatch]
   );
 
   // Computed: active company object
