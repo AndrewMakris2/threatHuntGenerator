@@ -1,31 +1,31 @@
 /* ============================================================
    Design System Variables — Phantom Hunter
-   Midnight blue premium cybersecurity theme
+   Midnight teal/cyan cybersecurity theme
    ============================================================ */
 
 :root {
   /* ── Background Layers ── */
-  --bg-base:        #070b12;
-  --bg-surface:     #0b1120;
-  --bg-card:        #0f172a;
-  --bg-secondary:   #0f172a;
-  --bg-tertiary:    #1e293b;
-  --bg-card-hover:  #172035;
-  --bg-elevated:    #1e2d45;
-  --bg-hover:       #172035;
+  --bg-base:        #060d0f;
+  --bg-surface:     #091419;
+  --bg-card:        #0d1e24;
+  --bg-secondary:   #0d1e24;
+  --bg-tertiary:    #132830;
+  --bg-card-hover:  #172e38;
+  --bg-elevated:    #1a3540;
+  --bg-hover:       #172e38;
   --bg-overlay:     rgba(0,0,0,0.85);
 
   /* ── Border ── */
-  --border-subtle:  rgba(99,130,200,0.08);
-  --border-default: rgba(99,130,200,0.14);
-  --border-strong:  rgba(99,130,200,0.24);
-  --border-accent:  rgba(99,130,246,0.4);
+  --border-subtle:  rgba(20,184,166,0.08);
+  --border-default: rgba(20,184,166,0.15);
+  --border-strong:  rgba(20,184,166,0.26);
+  --border-accent:  rgba(20,184,166,0.42);
 
   /* ── Brand / Accent ── */
-  --accent-primary:   #4f6ef7;
-  --accent-secondary: #818cf8;
-  --accent-cyan:      #22d3ee;
-  --accent-glow:      rgba(79,110,247,0.12);
+  --accent-primary:   #14b8a6;
+  --accent-secondary: #22d3ee;
+  --accent-cyan:      #06b6d4;
+  --accent-glow:      rgba(20,184,166,0.12);
 
   /* ── Severity / Status ── */
   --severity-critical: #f43f5e;
@@ -40,11 +40,11 @@
   --status-info:    #38bdf8;
 
   /* ── Text ── */
-  --text-primary:   #f1f5f9;
+  --text-primary:   #f0fafa;
   --text-secondary: #94a3b8;
-  --text-muted:     #475569;
-  --text-accent:    #818cf8;
-  --text-inverse:   #070b12;
+  --text-muted:     #476069;
+  --text-accent:    #22d3ee;
+  --text-inverse:   #060d0f;
 
   /* ── Typography ── */
   --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -89,8 +89,8 @@
   --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
   --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
   --shadow-xl:  0 16px 48px rgba(0,0,0,0.7);
-  --shadow-glow:        0 0 24px rgba(79,110,247,0.10);
-  --shadow-glow-strong: 0 0 40px rgba(79,110,247,0.18);
+  --shadow-glow:        0 0 24px rgba(20,184,166,0.12);
+  --shadow-glow-strong: 0 0 40px rgba(20,184,166,0.22);
 
   /* ── Transitions ── */
   --transition-fast:   120ms ease;

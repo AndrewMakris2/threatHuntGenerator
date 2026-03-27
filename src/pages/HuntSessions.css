@@ -33,8 +33,8 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: rgba(79,110,247,0.1);
-  border: 1px solid rgba(79,110,247,0.2);
+  background: rgba(20,184,166,0.1);
+  border: 1px solid rgba(20,184,166,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +80,7 @@
 .session-badge-ai {
   background: rgba(129,140,248,0.12);
   border-color: rgba(129,140,248,0.3);
-  color: #a5b4fc;
+  color: #5eead4;
 }
 
 .session-badge-rules {
