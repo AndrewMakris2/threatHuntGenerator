@@ -139,14 +139,14 @@ export default function HuntSessions() {
 
       {/* Hunt detail modal */}
       {activeHunt && (
-        <Modal onClose={() => setActiveHunt(null)} size="xl">
+        <Modal open onClose={() => setActiveHunt(null)} size="xl">
           <HuntDetail hunt={activeHunt} onClose={() => setActiveHunt(null)} />
         </Modal>
       )}
 
       {/* Confirm delete session */}
       {confirmDelete && (
-        <Modal onClose={() => setConfirmDelete(null)} size="sm">
+        <Modal open onClose={() => setConfirmDelete(null)} size="sm">
           <div style={{ padding: '1.5rem', textAlign: 'center' }}>
             <Trash2 size={28} style={{ color: 'var(--severity-high)', marginBottom: 12 }} />
             <h3 style={{ marginBottom: 8 }}>Delete this session?</h3>
@@ -163,7 +163,7 @@ export default function HuntSessions() {
 
       {/* Confirm clear all */}
       {confirmClear && (
-        <Modal onClose={() => setConfirmClear(false)} size="sm">
+        <Modal open onClose={() => setConfirmClear(false)} size="sm">
           <div style={{ padding: '1.5rem', textAlign: 'center' }}>
             <Trash2 size={28} style={{ color: 'var(--severity-critical)', marginBottom: 12 }} />
             <h3 style={{ marginBottom: 8 }}>Clear all hunt history?</h3>

@@ -112,7 +112,7 @@ export default function Settings() {
               <div className="settings-account-row">
                 <span className="settings-account-label">Member Since</span>
                 <span className="settings-account-value">
-                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
+                  {user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : '—'}
                 </span>
               </div>
               <div className="settings-account-row">

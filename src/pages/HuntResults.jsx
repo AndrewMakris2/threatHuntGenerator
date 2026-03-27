@@ -9,7 +9,7 @@ import HuntCard from '../components/hunt/HuntCard';
 import HuntDetail from '../components/hunt/HuntDetail';
 import Modal from '../components/common/Modal';
 import { HUNT_CATEGORIES } from '../data/huntTemplates';
-import { MITRE_TACTICS } from '../data/mitreTechniques';
+import { MITRE_TACTICS, getTechniqueById } from '../data/mitreTechniques';
 import { exportHuntsAsJSON, exportHuntsAsPDF, exportHuntsAsCSV } from '../services/exportService';
 import './HuntResults.css';
 
@@ -37,7 +37,7 @@ export default function HuntResults() {
     if (catFilter)   list = list.filter(h => h.category === catFilter);
     if (sevFilter)   list = list.filter(h => h.severity === sevFilter);
     if (diffFilter)  list = list.filter(h => h.difficulty === diffFilter);
-    if (mitreFilter) list = list.filter(h => (h.mitreTechniques || []).some(t => { try { return require('../data/mitreTechniques').getTechniqueById(t)?.tactic === mitreFilter; } catch { return false; } }));
+    if (mitreFilter) list = list.filter(h => (h.mitreTechniques || []).some(t => getTechniqueById(t)?.tactic === mitreFilter));
 
     list.sort((a, b) => {
       if (sortBy === 'relevance') return (b.relevanceScore || 0) - (a.relevanceScore || 0);
