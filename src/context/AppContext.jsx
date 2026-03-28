@@ -326,7 +326,7 @@ function loadPersistedState() {
       savedCompanies: saved.savedCompanies || [],
       activeCompanyId: saved.activeCompanyId || null,
       huntSessions: saved.huntSessions || [],
-      aiSettings: saved.aiSettings ? { provider: saved.aiSettings.provider || 'anthropic', model: saved.aiSettings.model || '', endpoint: saved.aiSettings.endpoint || '' } : { provider: 'anthropic', model: '', endpoint: '' },
+      aiSettings: saved.aiSettings ? { provider: saved.aiSettings.provider || 'anthropic', model: saved.aiSettings.model || '', endpoint: saved.aiSettings.endpoint || '', apiKey: saved.aiSettings.apiKey || '' } : { provider: 'anthropic', model: '', endpoint: '', apiKey: '' },
     };
   } catch {
     return null;
@@ -415,7 +415,7 @@ export function AppProvider({ children }) {
         savedCompanies: state.savedCompanies,
         activeCompanyId: state.activeCompanyId,
         huntSessions: state.huntSessions,
-        aiSettings: { provider: state.aiSettings.provider, model: state.aiSettings.model, endpoint: state.aiSettings.endpoint },
+        aiSettings: { provider: state.aiSettings.provider, model: state.aiSettings.model, endpoint: state.aiSettings.endpoint, apiKey: state.aiSettings.apiKey || '' },
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     } catch { /* quota exceeded or SSR */ }

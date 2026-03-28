@@ -254,6 +254,12 @@
   flex-shrink: 0;
 }
 
+.hunt-detail-step-number--investigation {
+  background: rgba(251,146,60,0.12);
+  border-color: rgba(251,146,60,0.25);
+  color: var(--severity-high);
+}
+
 .hunt-detail-step-text {
   font-size: var(--text-sm);
   color: var(--text-secondary);

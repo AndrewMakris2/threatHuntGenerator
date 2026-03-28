@@ -248,8 +248,18 @@ function computeDataSourceCoverage(hunt, profile) {
 
 // ── AI Provider Layer ─────────────────────────────────────────────────────────
 
+// Maximum output tokens per provider — Groq models cap at 8192
+const PROVIDER_MAX_TOKENS = {
+  anthropic: 16000,
+  openai:    16000,
+  azure:     16000,
+  local:     16000,
+  groq:       8000,
+};
+
 async function callAI(aiSettings, systemPrompt, userPrompt) {
   const { provider, model, apiKey, endpoint } = aiSettings;
+  const maxTokens = PROVIDER_MAX_TOKENS[provider] ?? 16000;
 
   const openAIRequest = async (url, extraHeaders = {}) => {
     const res = await fetch(url, {
@@ -261,8 +271,8 @@ async function callAI(aiSettings, systemPrompt, userPrompt) {
           { role: 'system', content: systemPrompt },
           { role: 'user',   content: userPrompt   },
         ],
-        temperature: 0.7,
-        max_tokens: 6000,
+        temperature: 0.3,
+        max_tokens: maxTokens,
       }),
     });
     if (!res.ok) {
@@ -296,7 +306,8 @@ async function callAI(aiSettings, systemPrompt, userPrompt) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 6000,
+        max_tokens: maxTokens,
+        temperature: 0.3,
         system: systemPrompt,
         messages: [{ role: 'user', content: userPrompt }],
       }),
@@ -351,22 +362,33 @@ function normalizeAIHunts(raw, profile) {
     .filter(h => h && h.title)
     .map((h, i) => {
       const score = Math.min(100, Math.max(0, Number(h.confidence) || Number(h.relevanceScore) || 70));
+
+      const mitreTechniques = (h.mitreTechniques || h.mitre_techniques || []).map(t =>
+        typeof t === 'string' ? { id: t, tactic: '' } : t
+      );
+
       return {
         id:           `ai-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 6)}`,
         templateId:   null,
         aiGenerated:  true,
         title:        h.title || 'Untitled Hunt',
         hypothesis:   h.hypothesis || '',
-        whyRelevant:  h.whyRelevant || h.why_relevant || '',
+        threatContext:     h.threatContext || h.threat_context || '',
+        whyRelevant:       h.whyRelevant || h.why_relevant || '',
+        detectionOpportunity: h.detectionOpportunity || h.detection_opportunity || '',
         category:     h.category || 'endpoint',
         severity:     h.severity || 'medium',
         difficulty:   h.difficulty || 'intermediate',
+        estimatedHuntTime: h.estimatedHuntTime || h.estimated_hunt_time || '',
         confidence:   score,
         relevanceScore: score,
-        mitreTechniques:     h.mitreTechniques    || h.mitre_techniques    || [],
+        mitreTechniques,
         huntSteps:           h.huntSteps          || h.hunt_steps          || [],
         exampleQueries:      h.exampleQueries     || h.example_queries     || [],
         suspiciousBehaviors: h.suspiciousBehaviors|| h.suspicious_behaviors|| [],
+        falsePositives:      h.falsePositives     || h.false_positives     || [],
+        investigationSteps:  h.investigationSteps || h.investigation_steps || [],
+        iocTypes:            h.iocTypes           || h.ioc_types           || [],
         recommendedLogSources: h.recommendedLogSources || h.recommended_log_sources || [],
         recommendedTools:    h.recommendedTools   || h.recommended_tools   || [],
         tags:                h.tags               || [],
@@ -392,68 +414,217 @@ function normalizeAIHunts(raw, profile) {
 
 async function generateHuntsWithAI(profile, aiSettings, options = {}) {
   const { maxHunts = 12, categories = [] } = options;
-  const catFilter = categories.length > 0
+
+  const cloudList    = (profile.cloudProviders || []).filter(c => c !== 'none').join(', ') || 'None';
+  const osList       = (profile.operatingSystems || []).join(', ') || 'Unknown';
+  const dataTypes    = (profile.dataTypes || []).join(', ') || 'Unknown';
+  const compliance   = (profile.complianceRequirements || []).join(', ') || 'None';
+  const threats      = (profile.topThreats || []).join(', ') || 'Unknown';
+  const actorConcerns = (profile.threatActorConcerns || []).join(', ') || 'None specified';
+  const internetFacing = (profile.internetFacingSystems || []).join(', ') || 'Unknown';
+  const endpointPlatforms = (profile.endpointPlatforms || []).join(', ') || 'Unknown';
+  const catFilter    = categories.length > 0
     ? `\nFocus ONLY on these hunt categories: ${categories.join(', ')}.`
     : '';
 
-  const systemPrompt = `You are a senior threat hunter and detection engineer with 15+ years of SOC experience.
-Generate specific, actionable threat hunt scenarios tailored to the exact environment described.
-- Write queries specific to the SIEM/EDR platforms mentioned (use correct syntax)
-- Map every hunt to real MITRE ATT&CK technique IDs (Txxxx or Txxxx.xxx format)
-- Make every hypothesis specific to the company's actual tools and data types
-- Return ONLY a valid JSON array — no markdown, no code fences, no explanation, just the raw JSON array`;
+  // Build SIEM-specific query guidance so the model writes correct syntax
+  const siemQueryGuide = buildSIEMQueryGuide(profile.siemPlatform, profile.edrPlatform);
 
-  const userPrompt = `Generate exactly ${maxHunts} threat hunt scenarios for this specific environment:
+  const systemPrompt = `You are a senior threat hunter, detection engineer, and incident responder with 15+ years of enterprise SOC experience. You have deep, hands-on expertise in:
 
+QUERY LANGUAGES — write syntactically correct queries for:
+- Microsoft Sentinel / Defender XDR: KQL (Kusto Query Language)
+- Splunk SIEM / Splunk ES: SPL (Search Processing Language)
+- Elastic SIEM / Elastic Security: EQL and KQL (Elastic syntax)
+- IBM QRadar: AQL (Ariel Query Language)
+- Chronicle / Google SecOps: YARA-L 2.0
+- Sumo Logic: Sumo Logic query syntax
+
+EDR PLATFORMS — know telemetry, process trees, and query interfaces for:
+- CrowdStrike Falcon (Event Search, Spotlight, RTR, Falcon Query Language)
+- SentinelOne (Deep Visibility, Power Queries, EQL via S1QL)
+- Microsoft Defender for Endpoint (Advanced Hunting, KQL)
+- Carbon Black (Live Query, watchlists, CBC query language)
+- Palo Alto Cortex XDR (XQL)
+
+THREAT INTELLIGENCE — know TTPs, tooling, and targeting patterns of:
+- Ransomware operators: LockBit, BlackCat/ALPHV, Cl0p, Play, Black Basta
+- Nation-state APTs: APT29/Cozy Bear, APT41, Lazarus Group, Volt Typhoon
+- BEC/financial fraud actors, initial access brokers, supply chain attackers
+
+MITRE ATT&CK — use precise technique IDs including sub-techniques (T1078.004 not just T1078)
+
+Your hunts must be:
+1. Technically precise — actual working query syntax for the specific platforms mentioned, not pseudocode
+2. Environment-specific — every field references the company's actual stack, domain, data, tools
+3. Analyst-grade — written for a skilled SOC analyst who will execute these immediately
+4. Threat-intelligence backed — ground each hunt in real observed attacker behavior with specific TTPs
+5. Actionable on findings — tell the analyst exactly what to do when they find something
+6. Honest about false positives — provide concrete FP reduction techniques
+
+Return ONLY a valid JSON array — no markdown, no code fences, no preamble, no explanation. Just the raw JSON array starting with [ and ending with ].`;
+
+  const userPrompt = `Generate exactly ${maxHunts} threat hunt scenarios for this specific environment. Every field must reference their actual tools, platforms, and data — no generic placeholders.
+
+=== ENVIRONMENT PROFILE ===
 Company: ${profile.companyName || 'Unknown'}
 Industry: ${profile.industry || 'Unknown'}
-Size: ${profile.companySize || 'Unknown'}
-Cloud Providers: ${(profile.cloudProviders || []).filter(c => c !== 'none').join(', ') || 'None'}
-SIEM Platform: ${profile.siemPlatform || 'Unknown'}
-EDR Platform: ${profile.edrPlatform || 'Unknown'}
-IAM / Identity: ${profile.iamPlatform || 'Unknown'}
+Company Size: ${profile.companySize || 'Unknown'}
+Website/Domain: ${profile.websiteUrl || 'Unknown'}
+
+=== INFRASTRUCTURE ===
+Architecture: ${profile.onPremVsCloud || 'Unknown'} (on-prem / cloud / hybrid)
+Cloud Providers: ${cloudList}
+Operating Systems: ${osList}
+Endpoint Platforms: ${endpointPlatforms}
+Network Segmentation: ${profile.networkSegmentation || 'Unknown'}
+Internet-Facing Systems: ${internetFacing}
+Remote Work Level: ${profile.remoteWorkLevel || 'Unknown'}
+VPN / Remote Access: ${(profile.internetFacingSystems || []).includes('vpn') ? 'Yes' : 'Unknown'}
+Backup Solution: ${profile.backupSolution || 'Unknown'}
+Third-Party Dependence: ${profile.thirdPartyDependence || 'Unknown'}
+
+=== SECURITY TOOLS ===
+SIEM: ${profile.siemPlatform || 'Unknown'}
+EDR: ${profile.edrPlatform || 'Unknown'}
+IAM / Identity Provider: ${profile.iamPlatform || 'Unknown'}
 Email Platform: ${profile.emailPlatform || 'Unknown'}
 Email Security: ${profile.emailSecurityPlatform || 'None'}
-Infrastructure: ${profile.onPremVsCloud || 'Unknown'}
-Internet-Facing Systems: ${(profile.internetFacingSystems || []).join(', ') || 'Unknown'}
-Operating Systems: ${(profile.operatingSystems || []).join(', ') || 'Unknown'}
-Data Types Handled: ${(profile.dataTypes || []).join(', ') || 'Unknown'}
-Compliance Requirements: ${(profile.complianceRequirements || []).join(', ') || 'None'}
-Top Threat Concerns: ${(profile.topThreats || []).join(', ') || 'Unknown'}
+CASB: ${profile.casb || 'None'}
+PAM Solution: ${profile.pamSolution || 'None'}
+
+=== DATA & COMPLIANCE ===
+Data Types Handled: ${dataTypes}
+Data Sensitivity Level: ${profile.dataSensitivity || 'Unknown'}
+Compliance Frameworks: ${compliance}
+
+=== THREAT POSTURE ===
+Top Threat Concerns: ${threats}
+Known Threat Actor Concerns: ${actorConcerns}
 Known Security Gaps: ${profile.securityGaps || 'Not specified'}
-Recent Incidents: ${profile.recentIncidents || 'None'}
-Remote Work Level: ${profile.remoteWorkLevel || 'Unknown'}
-Data Sensitivity: ${profile.dataSensitivity || 'Unknown'}
+Recent Incidents or Near-Misses: ${profile.recentIncidents || 'None reported'}
+Detection Maturity: ${profile.detectionMaturity || 'Unknown'}
+IR Maturity: ${profile.incidentResponseMaturity || 'Unknown'}
 ${catFilter}
 
-Return a JSON array where each element is:
+${siemQueryGuide}
+
+=== REQUIRED JSON SCHEMA ===
+Return a JSON array. Each element must follow this exact structure — populate ALL fields with environment-specific detail:
+
 {
-  "title": "specific descriptive hunt name",
-  "hypothesis": "If [specific attacker action using their tools] then [specific observable artifact in their environment]",
-  "whyRelevant": "2-3 sentences specific to THIS company explaining why this hunt matters for their exact environment",
-  "category": "<one of: endpoint, lateral, identity, email, cloud, exfiltration, ransomware, insider, persistence, network, saas-abuse, admin-activity>",
+  "title": "Specific, descriptive hunt name referencing the attack technique and relevant platform (e.g., 'Entra ID Token Theft via Device Code Auth Flow')",
+
+  "hypothesis": "If [specific attacker using named TTP/technique] targeting [company's specific platform/data] then [specific forensic artifact/observable] will appear in [specific log source with table/index name]",
+
+  "threatContext": "2-3 sentences: What real-world threat actor or campaign motivates this hunt? What have they been observed doing? Why is this company a plausible target? Reference real TTPs and threat actor groups where applicable.",
+
+  "whyRelevant": "3-4 sentences specific to THIS company's stack explaining: (1) which specific tool/platform creates the attack surface, (2) what data or asset is at risk, (3) what detection gap exists, (4) what compliance or business risk this addresses",
+
+  "category": "<one of: endpoint | lateral | identity | email | cloud | exfiltration | ransomware | insider | persistence | network | saas-abuse | admin-activity>",
+
   "severity": "<critical | high | medium | low>",
   "difficulty": "<beginner | intermediate | advanced | expert>",
-  "confidence": <number 0-100>,
-  "mitreTechniques": ["T1078", "T1110.003"],
-  "huntSteps": ["Step 1: ...", "Step 2: ...", "Step 3: ...", "Step 4: ...", "Step 5: ..."],
+  "confidence": <integer 0-100 — how likely this threat is relevant to this specific environment>,
+  "estimatedHuntTime": "<e.g. '2-4 hours' — realistic time estimate for an analyst to complete this hunt>",
+
+  "mitreTechniques": [
+    { "id": "T1078.004", "name": "Valid Accounts: Cloud Accounts", "tactic": "Initial Access" }
+  ],
+
+  "huntSteps": [
+    "Step 1 — [Verb] [specific action]: [exact what to do, which tool/console to open, which query to run or filter to apply]",
+    "Step 2 — ...",
+    "Step 3 — ...",
+    "Step 4 — ...",
+    "Step 5 — ...",
+    "Step 6 — ...",
+    "Step 7 — Document findings: Record any anomalies found, IOCs collected, systems affected, and timeline in your case management system"
+  ],
+
   "exampleQueries": [
     {
       "platform": "${profile.siemPlatform || 'SIEM'}",
-      "language": "spl or kql or sigma or eql",
-      "query": "actual working query string for their SIEM"
+      "language": "<kql | spl | aql | yaral | eql>",
+      "description": "What this query detects and any tuning notes",
+      "query": "<syntactically correct, runnable query using correct table/index names for this platform — not pseudocode>"
+    },
+    {
+      "platform": "${profile.edrPlatform || 'EDR'}",
+      "language": "<edr-specific query language>",
+      "description": "EDR telemetry query for process/network/file events",
+      "query": "<syntactically correct query for this EDR platform>"
     }
   ],
-  "suspiciousBehaviors": ["observable indicator 1", "observable indicator 2", "observable indicator 3"],
-  "recommendedLogSources": ["log source 1", "log source 2"],
-  "recommendedTools": ["tool 1", "tool 2"],
-  "tags": ["keyword1", "keyword2", "keyword3"]
+
+  "suspiciousBehaviors": [
+    "Specific observable behavior 1 — what it looks like in the data (include field names/values where possible)",
+    "Specific observable behavior 2",
+    "Specific observable behavior 3",
+    "Specific observable behavior 4"
+  ],
+
+  "falsePositives": [
+    "Common FP scenario 1 — how to distinguish it from true positives",
+    "Common FP scenario 2 — filter or exclusion to apply"
+  ],
+
+  "investigationSteps": [
+    "When you find a match: Step 1 — [immediate triage action]",
+    "Step 2 — [lateral movement / scope check]",
+    "Step 3 — [containment or escalation decision point]"
+  ],
+
+  "detectionOpportunity": "How to operationalize this hunt into a permanent detection rule — what threshold, timeframe, and exclusions would make a reliable alert",
+
+  "recommendedLogSources": [
+    "Specific log source 1 — exact table/index name for their SIEM (e.g. 'SigninLogs table in Microsoft Sentinel')",
+    "Specific log source 2"
+  ],
+
+  "recommendedTools": ["Tool 1 with specific use case", "Tool 2"],
+
+  "iocTypes": ["Type of IOC to collect during this hunt (e.g. 'Suspicious OAuth app IDs', 'Unusual user-agent strings')"],
+
+  "tags": ["mitre-tXXXX", "platform-specific-tag", "threat-actor-name-if-applicable"]
 }`;
 
   const rawText = await callAI(aiSettings, systemPrompt, userPrompt);
   const jsonText = extractJSON(rawText);
   const parsed = JSON.parse(jsonText);
   return normalizeAIHunts(parsed, profile);
+}
+
+function buildSIEMQueryGuide(siem, edr) {
+  // More-specific keys must come before shorter ones that are substrings of them
+  // e.g. "sentinelone" must precede "sentinel" or it would match Microsoft Sentinel first
+  const SIEM_GUIDES = {
+    'sentinelone':     'SIEM is SentinelOne SIEM (Singularity Data Lake) — write Power Query Language. Key syntax: EventType = "X" AND field CONTAINS "value", use IN, NOT IN, MATCHES ANYCASE, LIKE. Key event types: "Process Creation", "File Creation", "File Modification", "Network Connection", "DNS Resolved", "Registry Value Modified", "Login", "Logout". Key fields: SrcProcName, SrcProcCmdLine, SrcProcParentName, TgtFilePath, TgtProcName, DstIP, DstPort, DstDomain, UserName, AgentComputerName, AgentUUID. Example: EventType = "Process Creation" AND SrcProcName CONTAINS "powershell.exe" AND SrcProcCmdLine MATCHES ANYCASE "*-encodedcommand*" | group by AgentComputerName, UserName, SrcProcCmdLine',
+    'next-gen':        'SIEM is CrowdStrike Falcon Next-Gen SIEM (LogScale / Falcon Data Replicator) — write LogScale Query Language (LQL). Key syntax: | filter(), | groupBy(), | stats(), | sort(), | regex(). Key fields: #event_simpleName, ComputerName, UserName, CommandLine, ImageFileName, ParentBaseFileName, RemoteAddressIP4, LocalAddressIP4, TargetFileName, RegObjectName. Event types: ProcessRollup2 (process), NetworkConnectIP4 (network), UserLogon/UserLogoff (auth), PeFileWritten (file write), RegistryOperationV2 (registry). Example: #event_simpleName=ProcessRollup2 | filter(CommandLine=~regex(".*-[Ee]nc.*")) | groupBy([ComputerName, UserName, CommandLine], function=count())',
+    'logscale':        'SIEM is CrowdStrike Falcon Next-Gen SIEM (LogScale) — write LogScale Query Language (LQL). Key syntax: | filter(), | groupBy(), | stats(), | sort(), | regex(). Key fields: #event_simpleName, ComputerName, UserName, CommandLine, ImageFileName, ParentBaseFileName, RemoteAddressIP4. Event types: ProcessRollup2, NetworkConnectIP4, UserLogon, PeFileWritten, RegistryOperationV2.',
+    'microsoft sentinel': 'SIEM is Microsoft Sentinel — write KQL queries using real Sentinel table names: SigninLogs, AuditLogs, SecurityEvent, DeviceProcessEvents, OfficeActivity, BehaviorAnalytics, ThreatIntelligenceIndicator, AzureActivity, CloudAppEvents, EmailEvents. Use | where, | summarize, | extend, | join, | project.',
+    'sentinel':        'SIEM is Microsoft Sentinel — write KQL queries using real Sentinel table names: SigninLogs, AuditLogs, SecurityEvent, DeviceProcessEvents, OfficeActivity, BehaviorAnalytics, ThreatIntelligenceIndicator, AzureActivity, CloudAppEvents, EmailEvents. Use | where, | summarize, | extend, | join, | project.',
+    'splunk':          'SIEM is Splunk — write SPL using index= and sourcetype= with real Splunk CIM field names (src_ip, dest_ip, user, process_name, parent_process_name, EventCode). Use | stats, | eval, | where, | rex, | transaction, | lookup.',
+    'elastic':         'SIEM is Elastic — write EQL for behavioral detections (sequence by, any where) and Elastic KQL for filtering. Use correct field names: process.name, user.name, source.ip, event.action, winlog.event_id.',
+    'qradar':          'SIEM is QRadar — write AQL (Ariel Query Language): SELECT fields FROM events WHERE conditions LAST X MINUTES. Use correct field names: sourceip, destinationip, username, eventname.',
+    'chronicle':       'SIEM is Chronicle/Google SecOps — write YARA-L 2.0 rules with rule name, meta, events, condition blocks. Use UDM field names: principal.user.userid, target.hostname, network.ip_protocol.',
+    'google':          'SIEM is Chronicle/Google SecOps — write YARA-L 2.0 rules with rule name, meta, events, condition blocks. Use UDM field names: principal.user.userid, target.hostname, network.ip_protocol.',
+  };
+  const EDR_GUIDES = {
+    crowdstrike:   'EDR is CrowdStrike Falcon — for Event Search queries use Falcon Query Language (FQL). Key fields: ComputerName, UserName, ImageFileName, CommandLine, ParentBaseFileName, RemoteAddressIP4. For Advanced Hunting use falcon:process or falcon:network_connect event types.',
+    sentinelone:   'EDR is SentinelOne — use Deep Visibility Power Queries or EQL. Key fields: ProcessName, ParentProcessName, CmdLine, SrcIp, DstIp, FileFullName, UserName, AgentName. Use CONTAINS, IN, REGEX operators.',
+    defender:      'EDR is Microsoft Defender for Endpoint — use KQL in Advanced Hunting. Key tables: DeviceProcessEvents, DeviceNetworkEvents, DeviceFileEvents, DeviceLogonEvents, DeviceRegistryEvents, DeviceAlertEvents. Key fields: InitiatingProcessFileName, FileName, ProcessCommandLine, RemoteIP.',
+    mde:           'EDR is Microsoft Defender for Endpoint — use KQL in Advanced Hunting. Key tables: DeviceProcessEvents, DeviceNetworkEvents, DeviceFileEvents, DeviceLogonEvents, DeviceRegistryEvents, DeviceAlertEvents. Key fields: InitiatingProcessFileName, FileName, ProcessCommandLine, RemoteIP.',
+    'carbon black': 'EDR is Carbon Black — use CBC query syntax: process_name:, parent_name:, cmdline:, netconn_ipv4:, filemod_name:. For Live Response use process list, directory listing commands.',
+    cb:            'EDR is Carbon Black — use CBC query syntax: process_name:, parent_name:, cmdline:, netconn_ipv4:, filemod_name:. For Live Response use process list, directory listing commands.',
+  };
+
+  const siemLower = (siem || '').toLowerCase();
+  const edrLower  = (edr  || '').toLowerCase();
+  const siemGuide = Object.entries(SIEM_GUIDES).find(([k]) => siemLower.includes(k))?.[1] ?? '';
+  const edrGuide  = Object.entries(EDR_GUIDES ).find(([k]) => edrLower .includes(k))?.[1] ?? '';
+
+  return ['=== QUERY SYNTAX REQUIREMENTS ===', siemGuide, edrGuide].filter(Boolean).join('\n');
 }
 
 // ── Main Generation Function ──────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Bookmark, BookmarkCheck, X, Shield, Target, Clock,
   AlertTriangle, CheckCircle, XCircle, TrendingUp, Database,
@@ -103,7 +103,7 @@ export default function HuntDetail({ hunt, onClose }) {
           <MetricItem icon={TrendingUp} label="Relevance" value={`${hunt.relevanceScore}%`} color="blue" />
           <MetricItem icon={Shield}     label="Confidence" value={`${hunt.confidence}%`} color="teal" />
           <MetricItem icon={Database}   label="Coverage" value={`${hunt.dataSourceCoverage || 0}%`} color="purple" />
-          <MetricItem icon={Clock}      label="Est. Time" value={hunt.estimatedTime} color="orange" />
+          <MetricItem icon={Clock}      label="Est. Time" value={hunt.estimatedHuntTime || hunt.estimatedTime} color="orange" />
           <MetricItem icon={Target}     label="Frequency" value={hunt.frequency || 'Weekly'} color="green" />
           <MetricItem icon={Layers}     label="Maturity" value={hunt.maturityRequired} color="yellow" />
         </div>
@@ -215,45 +215,40 @@ function DifficultyBadge({ difficulty }) {
 function OverviewTab({ hunt }) {
   return (
     <div className="tab-content-overview">
-      {/* Why relevant callout */}
-      <div className="callout callout-info">
-        <Info size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 2 }} />
-        <div>
-          <div className="hunt-detail-callout-title">Why This Hunt Matters</div>
-          <p className="hunt-detail-callout-text">{hunt.whyRelevant}</p>
-        </div>
-      </div>
+      <Callout variant="info" icon={Info} title="Why This Hunt Matters" text={hunt.whyRelevant} />
 
-      {/* Hypothesis */}
+      {hunt.threatContext && (
+        <Callout variant="danger" icon={AlertTriangle} title="Threat Intelligence Context" text={hunt.threatContext} />
+      )}
+
       <Section title="Threat Hypothesis" icon={Target}>
         <p className="hunt-detail-body-text">{hunt.hypothesis}</p>
       </Section>
 
-      {/* MITRE Techniques */}
       <Section title="MITRE ATT&CK Techniques" icon={Layers}>
         <div className="hunt-detail-mitre-grid">
-          {(hunt.mitreTechniques || []).map(id => {
-            const t = getTechniqueById(id);
+          {(hunt.mitreTechniques || []).map((entry, i) => {
+            const techniqueId = typeof entry === 'string' ? entry : entry?.id;
+            const tactic      = entry?.tactic || getTechniqueById(techniqueId)?.tactic || '';
+            const name        = entry?.name;
             return (
-              <div key={id} className="hunt-detail-mitre-item">
-                <MITREBadge techniqueId={id} size="md" />
-                {t && <span className="hunt-detail-mitre-desc">{t.tactic}</span>}
+              <div key={i} className="hunt-detail-mitre-item">
+                <MITREBadge techniqueId={techniqueId} size="md" />
+                <span className="hunt-detail-mitre-desc">
+                  {tactic}{name ? ` — ${name}` : ''}
+                </span>
               </div>
             );
           })}
         </div>
       </Section>
 
-      {/* Threat Actors */}
       {hunt.relevantThreatActors?.length > 0 && (
         <Section title="Relevant Threat Actors" icon={AlertTriangle}>
           <div className="hunt-detail-actors">
             {hunt.relevantThreatActors.map(actor => (
               <div key={actor.id} className="hunt-detail-actor">
-                <div
-                  className="hunt-detail-actor-dot"
-                  style={{ background: actor.color }}
-                />
+                <div className="hunt-detail-actor-dot" style={{ background: actor.color }} />
                 <div>
                   <div className="hunt-detail-actor-name">{actor.name}</div>
                   <div className="hunt-detail-actor-meta">{actor.nation} — {actor.riskLevel}</div>
@@ -264,7 +259,6 @@ function OverviewTab({ hunt }) {
         </Section>
       )}
 
-      {/* Data Sources */}
       <Section title="Required Data Sources" icon={Database}>
         <div className="hunt-detail-sources">
           {(hunt.dataSources || []).map((s, i) => (
@@ -286,26 +280,11 @@ function OverviewTab({ hunt }) {
         )}
       </Section>
 
-      {/* Business Impact */}
       {hunt.businessImpact && (
-        <div className="callout callout-warning">
-          <AlertTriangle size={16} style={{ color: 'var(--severity-medium)', flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <div className="hunt-detail-callout-title">Business Impact</div>
-            <p className="hunt-detail-callout-text">{hunt.businessImpact}</p>
-          </div>
-        </div>
+        <Callout variant="warning" icon={AlertTriangle} title="Business Impact" text={hunt.businessImpact} />
       )}
-
-      {/* Detection Gap */}
       {hunt.detectionGap && (
-        <div className="callout callout-danger">
-          <Zap size={16} style={{ color: 'var(--severity-critical)', flexShrink: 0, marginTop: 2 }} />
-          <div>
-            <div className="hunt-detail-callout-title">Detection Gap</div>
-            <p className="hunt-detail-callout-text">{hunt.detectionGap}</p>
-          </div>
-        </div>
+        <Callout variant="danger" icon={Zap} title="Detection Gap" text={hunt.detectionGap} />
       )}
     </div>
   );
@@ -323,6 +302,19 @@ function HuntStepsTab({ hunt }) {
           </div>
         ))}
       </div>
+
+      {hunt.investigationSteps?.length > 0 && (
+        <Section title="When You Find Something — Investigation Steps" icon={ArrowRight} iconColor="var(--severity-high)">
+          <div className="hunt-detail-steps">
+            {hunt.investigationSteps.map((step, i) => (
+              <div key={i} className="hunt-detail-step">
+                <div className="hunt-detail-step-number hunt-detail-step-number--investigation">{i + 1}</div>
+                <p className="hunt-detail-step-text">{step}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {hunt.recommendedTools?.length > 0 && (
         <div className="hunt-detail-tools">
@@ -362,76 +354,69 @@ function QueriesTab({ hunt, onCopyQuery }) {
                 <Copy size={13} /> Copy Query
               </button>
             </div>
+            {q.description && (
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '0 var(--space-1) var(--space-2)', lineHeight: 1.6 }}>
+                {q.description}
+              </p>
+            )}
             <pre className="code-block">{q.query}</pre>
           </div>
         ))
       )}
 
-      {/* Suggested query types callout */}
-      <div className="callout callout-info" style={{ marginTop: 'var(--space-4)' }}>
-        <Info size={16} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-        <div>
-          <div className="hunt-detail-callout-title">AI Query Generation</div>
-          <p className="hunt-detail-callout-text">
-            Connect an AI provider in Settings to auto-generate queries customized to your exact SIEM schema and field names.
-          </p>
-        </div>
-      </div>
+      <Callout
+        variant="info"
+        icon={Info}
+        title="AI Query Generation"
+        text="Connect an AI provider in Settings to auto-generate queries customized to your exact SIEM schema and field names."
+        style={{ marginTop: 'var(--space-4)' }}
+      />
     </div>
   );
 }
 
 // ── IOCs Tab ───────────────────────────────────────────────────────────────────
 function IOCsTab({ hunt }) {
+  const fpList = useMemo(
+    () => [...(hunt.falsePositives || []), ...(hunt.falsePositiveIndicators || [])],
+    [hunt.falsePositives, hunt.falsePositiveIndicators],
+  );
+
   return (
     <div className="tab-content">
       <Section title="Suspicious Behaviors to Look For" icon={AlertTriangle}>
-        <ul className="hunt-detail-ioc-list">
-          {(hunt.suspiciousBehaviors || []).map((b, i) => (
-            <li key={i} className="hunt-detail-ioc-item hunt-detail-ioc-suspicious">
-              <span className="hunt-detail-ioc-bullet">⚠</span>
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
+        <IOCList items={hunt.suspiciousBehaviors} icon={AlertTriangle} itemClass="hunt-detail-ioc-suspicious" bullet="⚠" />
       </Section>
 
-      <Section title="True Positive Indicators" icon={CheckCircle} iconColor="var(--status-success)">
-        <ul className="hunt-detail-ioc-list">
-          {(hunt.truePositiveIndicators || []).map((b, i) => (
-            <li key={i} className="hunt-detail-ioc-item hunt-detail-ioc-tp">
-              <CheckCircle size={13} style={{ color: 'var(--status-success)', flexShrink: 0 }} />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {hunt.iocTypes?.length > 0 && (
+        <Section title="IOC Types to Collect" icon={Database} iconColor="var(--accent-secondary)">
+          <IOCList items={hunt.iocTypes} icon={CheckCircle} iconColor="var(--accent-secondary)" />
+        </Section>
+      )}
 
-      <Section title="False Positive Indicators" icon={XCircle} iconColor="var(--text-muted)">
-        <ul className="hunt-detail-ioc-list">
-          {(hunt.falsePositiveIndicators || []).map((b, i) => (
-            <li key={i} className="hunt-detail-ioc-item hunt-detail-ioc-fp">
-              <XCircle size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {hunt.truePositiveIndicators?.length > 0 && (
+        <Section title="True Positive Indicators" icon={CheckCircle} iconColor="var(--status-success)">
+          <IOCList items={hunt.truePositiveIndicators} icon={CheckCircle} iconColor="var(--status-success)" itemClass="hunt-detail-ioc-tp" />
+        </Section>
+      )}
 
-      <Section title="Triage Guidance" icon={Shield}>
-        <p className="hunt-detail-body-text">{hunt.triageGuidance}</p>
-      </Section>
+      {fpList.length > 0 && (
+        <Section title="False Positive Reduction" icon={XCircle} iconColor="var(--text-muted)">
+          <IOCList items={fpList} icon={XCircle} iconColor="var(--text-muted)" itemClass="hunt-detail-ioc-fp" />
+        </Section>
+      )}
 
-      <Section title="Escalation Recommendations" icon={ArrowRight}>
-        <ul className="hunt-detail-ioc-list">
-          {(hunt.escalationRecommendations || []).map((r, i) => (
-            <li key={i} className="hunt-detail-ioc-item">
-              <ArrowRight size={13} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
-              <span>{r}</span>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      {hunt.triageGuidance && (
+        <Section title="Triage Guidance" icon={Shield}>
+          <p className="hunt-detail-body-text">{hunt.triageGuidance}</p>
+        </Section>
+      )}
+
+      {hunt.escalationRecommendations?.length > 0 && (
+        <Section title="Escalation Recommendations" icon={ArrowRight}>
+          <IOCList items={hunt.escalationRecommendations} icon={ArrowRight} iconColor="var(--accent-primary)" />
+        </Section>
+      )}
     </div>
   );
 }
@@ -440,22 +425,34 @@ function IOCsTab({ hunt }) {
 function RemediationTab({ hunt }) {
   return (
     <div className="tab-content">
-      <Section title="Remediation Actions" icon={CheckCircle} iconColor="var(--status-success)">
-        <div className="hunt-detail-remediation">
-          {(hunt.remediationActions || []).map((action, i) => (
-            <div key={i} className="hunt-detail-remediation-item">
-              <div className="hunt-detail-remediation-number">{i + 1}</div>
-              <p>{action}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
+      {hunt.remediationActions?.length > 0 && (
+        <Section title="Remediation Actions" icon={CheckCircle} iconColor="var(--status-success)">
+          <div className="hunt-detail-remediation">
+            {hunt.remediationActions.map((action, i) => (
+              <div key={i} className="hunt-detail-remediation-item">
+                <div className="hunt-detail-remediation-number">{i + 1}</div>
+                <p>{action}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {hunt.detectionOpportunity && (
+        <Callout
+          variant="info"
+          icon={Zap}
+          title="Detection Opportunity"
+          text={hunt.detectionOpportunity}
+          style={{ marginBottom: 'var(--space-5)' }}
+        />
+      )}
 
       <div className="hunt-detail-meta-grid">
+        <MetaBlock label="Est. Hunt Time" value={hunt.estimatedHuntTime || hunt.estimatedTime} />
         <MetaBlock label="Suggested Frequency" value={hunt.suggestedFrequency || hunt.frequency} />
         <MetaBlock label="Maturity Required" value={hunt.maturityRequired} />
         <MetaBlock label="Difficulty" value={hunt.difficulty} />
-        <MetaBlock label="Business Impact" value={hunt.businessImpact} />
       </div>
     </div>
   );
@@ -503,7 +500,45 @@ Example:
   );
 }
 
-// ── Shared Section component ───────────────────────────────────────────────────
+// ── Shared sub-components ──────────────────────────────────────────────────────
+
+const CALLOUT_COLORS = {
+  info:    { bg: 'callout-info',    icon: 'var(--accent-primary)'     },
+  danger:  { bg: 'callout-danger',  icon: 'var(--severity-critical)'  },
+  warning: { bg: 'callout-warning', icon: 'var(--severity-medium)'    },
+  success: { bg: 'callout-success', icon: 'var(--status-success)'     },
+};
+
+function Callout({ variant = 'info', icon: Icon, title, text, style }) {
+  const { bg, icon: iconColor } = CALLOUT_COLORS[variant] ?? CALLOUT_COLORS.info;
+  return (
+    <div className={`callout ${bg}`} style={style}>
+      <Icon size={16} style={{ color: iconColor, flexShrink: 0, marginTop: 2 }} />
+      <div>
+        <div className="hunt-detail-callout-title">{title}</div>
+        <p className="hunt-detail-callout-text">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function IOCList({ items = [], icon: Icon, iconColor, itemClass = '', bullet }) {
+  if (!items.length) return null;
+  return (
+    <ul className="hunt-detail-ioc-list">
+      {items.map((item, i) => (
+        <li key={i} className={`hunt-detail-ioc-item ${itemClass}`}>
+          {bullet
+            ? <span className="hunt-detail-ioc-bullet">{bullet}</span>
+            : <Icon size={13} style={{ color: iconColor, flexShrink: 0 }} />
+          }
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function Section({ title, icon: Icon, iconColor, children }) {
   return (
     <div className="hunt-detail-section">

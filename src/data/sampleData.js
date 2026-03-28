@@ -162,9 +162,11 @@ export const SIEM_OPTIONS = [
   { value: 'Gurucul SIEM',              label: 'Gurucul UEBA / SIEM' },
   { value: 'Palo Alto Cortex XSIAM',   label: 'Palo Alto Cortex XSIAM' },
   { value: 'Cybereason SIEM',           label: 'Cybereason XDR Platform' },
-  { value: 'Hunters SOC Platform',      label: 'Hunters SOC Platform' },
-  { value: 'none',                      label: 'No SIEM' },
-  { value: 'other',                     label: 'Other' },
+  { value: 'Hunters SOC Platform',          label: 'Hunters SOC Platform' },
+  { value: 'CrowdStrike Falcon Next-Gen SIEM', label: 'CrowdStrike Falcon Next-Gen SIEM (LogScale)' },
+  { value: 'SentinelOne SIEM',               label: 'SentinelOne SIEM (Singularity Data Lake)' },
+  { value: 'none',                           label: 'No SIEM' },
+  { value: 'other',                          label: 'Other' },
 ];
 
 export const EDR_OPTIONS = [

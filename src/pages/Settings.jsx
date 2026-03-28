@@ -207,7 +207,7 @@ export default function Settings() {
                   value={apiKey}
                   onChange={e => setApiKey(e.target.value)}
                 />
-                <span className="form-hint">Stored in memory only — never persisted to localStorage</span>
+                <span className="form-hint">Saved locally to your browser — never sent to any server</span>
               </div>
             </div>
 
