@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Mail, Lock, LogIn, UserPlus, Eye, EyeOff, Zap } from 'lucide-react';
+import { Shield, Mail, Lock, LogIn, UserPlus, Eye, EyeOff, Zap, Smartphone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Auth.css';
 
 export default function Auth() {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, getMFAResolver, completeMFASignIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
@@ -18,6 +18,11 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // MFA state
+  const [mfaStep, setMfaStep] = useState(false);
+  const [mfaResolver, setMfaResolver] = useState(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -40,11 +45,33 @@ export default function Auth() {
         navigate(from, { replace: true });
       } else {
         await signUp(email, password);
-        setSuccessMsg('Account created! Check your email to confirm, then log in.');
+        setSuccessMsg('Account created! You can now sign in.');
         setMode('login');
       }
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      if (err.code === 'auth/multi-factor-auth-required') {
+        // MFA required — switch to the OTP step
+        setMfaResolver(getMFAResolver(err));
+        setMfaStep(true);
+      } else {
+        setError(err.message || 'Authentication failed');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMFAVerify(e) {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      await completeMFASignIn(mfaResolver, mfaCode.trim());
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err.code === 'auth/invalid-verification-code'
+        ? 'Invalid code — please check your authenticator app and try again.'
+        : err.message || 'MFA verification failed');
     } finally {
       setLoading(false);
     }
@@ -59,6 +86,62 @@ export default function Auth() {
       setError(err.message || 'Google sign-in failed');
       setLoading(false);
     }
+  }
+
+  // ── MFA verification screen ──────────────────────────────────────────────────
+  if (mfaStep) {
+    return (
+      <div className="auth-page">
+        <div className="auth-bg" />
+        <div className="auth-card">
+          <div className="auth-logo">
+            <div className="auth-logo-icon"><Smartphone size={24} /></div>
+            <div>
+              <div className="auth-logo-name">PHANTOM HUNTER</div>
+              <div className="auth-logo-sub">Two-Factor Verification</div>
+            </div>
+          </div>
+
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-4)', textAlign: 'center', lineHeight: 1.6 }}>
+            Open your authenticator app and enter the 6-digit code for Phantom Hunter.
+          </p>
+
+          <form className="auth-form" onSubmit={handleMFAVerify}>
+            {error && <div className="auth-error">{error}</div>}
+            <div className="auth-field">
+              <label className="auth-label">Authenticator Code</label>
+              <div className="auth-input-wrap">
+                <Smartphone size={15} className="auth-input-icon" />
+                <input
+                  className="auth-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={mfaCode}
+                  onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                  autoFocus
+                  required
+                  style={{ letterSpacing: '0.2em', fontSize: 'var(--text-lg)', textAlign: 'center' }}
+                />
+              </div>
+            </div>
+            <button className="btn btn-primary auth-submit" type="submit" disabled={loading || mfaCode.length !== 6}>
+              {loading ? 'Verifying…' : 'Verify & Sign In'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              style={{ width: '100%', marginTop: 'var(--space-2)' }}
+              onClick={() => { setMfaStep(false); setMfaCode(''); setError(''); }}
+            >
+              ← Back to sign in
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (

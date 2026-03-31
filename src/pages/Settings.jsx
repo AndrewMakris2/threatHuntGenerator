@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Settings as SettingsIcon, Zap, Trash2, Download, RotateCcw,
   Key, Globe, Shield, Database, Info, ExternalLink, CheckCircle,
-  User, Cloud, CloudOff, LogOut,
+  User, Cloud, CloudOff, LogOut, Smartphone, Lock, X,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,13 +20,70 @@ const AI_PROVIDERS = [
 
 export default function Settings() {
   const { state, dispatch, addToast } = useApp();
-  const { user, signOut, isSupabaseEnabled } = useAuth();
+  const { user, signOut, isSupabaseEnabled, getMFAEnrolledFactors, startMFAEnrollment, finishMFAEnrollment, removeMFA } = useAuth();
   const existingAI = state.aiSettings || {};
   const [aiProvider,  setAiProvider]  = useState(existingAI.provider  || 'anthropic');
   const [aiModel,     setAiModel]     = useState(existingAI.model     || 'claude-sonnet-4-6');
   const [apiKey,      setApiKey]      = useState(existingAI.apiKey    || '');
   const [apiEndpoint, setApiEndpoint] = useState(existingAI.endpoint  || '');
   const [saved,       setSaved]       = useState(false);
+
+  // MFA state
+  const [mfaPhase,   setMfaPhase]   = useState('idle'); // 'idle' | 'qr' | 'verify' | 'removing'
+  const [mfaSecret,  setMfaSecret]  = useState(null);
+  const [mfaQrUrl,   setMfaQrUrl]   = useState('');
+  const [mfaCode,    setMfaCode]    = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError,   setMfaError]   = useState('');
+  const enrolledFactors = isSupabaseEnabled && user ? (getMFAEnrolledFactors?.() || []) : [];
+  const mfaEnabled = enrolledFactors.length > 0;
+
+  async function handleStartMFAEnroll() {
+    setMfaError('');
+    setMfaLoading(true);
+    try {
+      const { secret, qrUrl } = await startMFAEnrollment();
+      setMfaSecret(secret);
+      setMfaQrUrl(qrUrl);
+      setMfaPhase('qr');
+    } catch (err) {
+      setMfaError(err.message || 'Failed to start MFA setup');
+    } finally {
+      setMfaLoading(false);
+    }
+  }
+
+  async function handleFinishMFAEnroll(e) {
+    e.preventDefault();
+    setMfaError('');
+    setMfaLoading(true);
+    try {
+      await finishMFAEnrollment(mfaSecret, mfaCode.trim());
+      setMfaPhase('idle');
+      setMfaCode('');
+      setMfaSecret(null);
+      addToast('Two-factor authentication enabled', 'success');
+    } catch (err) {
+      setMfaError(err.code === 'auth/invalid-verification-code'
+        ? 'Invalid code — check your authenticator app and try again.'
+        : err.message || 'Failed to verify code');
+    } finally {
+      setMfaLoading(false);
+    }
+  }
+
+  async function handleRemoveMFA() {
+    if (!window.confirm('Disable two-factor authentication? Your account will only be protected by your password.')) return;
+    setMfaLoading(true);
+    try {
+      await removeMFA();
+      addToast('Two-factor authentication disabled', 'info');
+    } catch (err) {
+      addToast(err.message || 'Failed to disable MFA', 'error');
+    } finally {
+      setMfaLoading(false);
+    }
+  }
 
   const { generatedHunts, savedHunts, companyProfile } = state;
 
@@ -149,6 +206,117 @@ export default function Settings() {
             </div>
           )}
         </section>
+
+        {/* ── Two-Factor Authentication ── */}
+        {isSupabaseEnabled && user && (
+          <section className="card settings-section">
+            <div className="settings-section-header">
+              <div className="settings-section-icon" style={{ background: 'rgba(220,38,38,0.12)', color: 'var(--accent-primary)' }}>
+                <Smartphone size={18} />
+              </div>
+              <div>
+                <h2 className="section-title">Two-Factor Authentication</h2>
+                <p className="page-subtitle">Require an authenticator app code on every login</p>
+              </div>
+              <span
+                className={`badge ${mfaEnabled ? 'badge-low' : 'badge-info'}`}
+                style={{ marginLeft: 'auto' }}
+              >
+                {mfaEnabled ? '● Enabled' : '○ Disabled'}
+              </span>
+            </div>
+
+            {mfaEnabled && mfaPhase === 'idle' && (
+              <div>
+                <div className="callout callout-success" style={{ marginBottom: 'var(--space-4)' }}>
+                  <CheckCircle size={15} style={{ color: 'var(--status-success)', flexShrink: 0 }} />
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                    MFA is active. Every sign-in requires a code from your authenticator app.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={handleRemoveMFA}
+                  disabled={mfaLoading}
+                >
+                  <X size={13} /> Disable 2FA
+                </button>
+              </div>
+            )}
+
+            {!mfaEnabled && mfaPhase === 'idle' && (
+              <div>
+                <div className="callout callout-info" style={{ marginBottom: 'var(--space-4)' }}>
+                  <Info size={15} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                    Add an extra layer of security. You'll need an authenticator app like Google Authenticator, Authy, or 1Password.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleStartMFAEnroll}
+                  disabled={mfaLoading}
+                >
+                  <Lock size={14} /> {mfaLoading ? 'Setting up…' : 'Enable Two-Factor Auth'}
+                </button>
+                {mfaError && <p style={{ color: 'var(--severity-critical)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-2)' }}>{mfaError}</p>}
+              </div>
+            )}
+
+            {mfaPhase === 'qr' && (
+              <div>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-3)', lineHeight: 1.6 }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Step 1 —</strong> Scan this QR code with your authenticator app.
+                  Or manually enter the setup key below.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-4)' }}>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(mfaQrUrl)}`}
+                    alt="MFA QR Code"
+                    style={{ borderRadius: 8, border: '4px solid white' }}
+                  />
+                </div>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 'var(--space-4)', wordBreak: 'break-all' }}>
+                  Can't scan? Enter this URL manually in your app:<br />
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '10px' }}>{mfaQrUrl}</span>
+                </p>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-2)', lineHeight: 1.6 }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>Step 2 —</strong> Enter the 6-digit code your app shows.
+                </p>
+                <form onSubmit={handleFinishMFAEnroll} style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <input
+                    className="form-input"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={mfaCode}
+                    onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    required
+                    style={{ maxWidth: 140, letterSpacing: '0.2em', textAlign: 'center', fontSize: 'var(--text-lg)' }}
+                    autoFocus
+                  />
+                  <button
+                    className="btn btn-primary"
+                    type="submit"
+                    disabled={mfaLoading || mfaCode.length !== 6}
+                  >
+                    {mfaLoading ? 'Verifying…' : 'Verify & Enable'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => { setMfaPhase('idle'); setMfaCode(''); setMfaError(''); }}
+                  >
+                    Cancel
+                  </button>
+                </form>
+                {mfaError && <p style={{ color: 'var(--severity-critical)', fontSize: 'var(--text-sm)', marginTop: 'var(--space-2)' }}>{mfaError}</p>}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ── AI Integration ── */}
         <section className="card settings-section">
