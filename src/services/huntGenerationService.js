@@ -670,7 +670,7 @@ function buildSIEMQueryGuide(siem, edr) {
   const siemLower = (siem || '').toLowerCase();
   const edrLower  = (edr  || '').toLowerCase();
   const siemGuide = Object.entries(SIEM_GUIDES).find(([k]) => siemLower.includes(k))?.[1] ?? '';
-  const edrGuide  = Object.entries(EDR_GUIDES ).find(([k]) => edrLower .includes(k))?.[1] ?? '';
+  const edrGuide  = Object.entries(EDR_GUIDES).find(([k]) => edrLower.includes(k))?.[1] ?? '';
 
   return ['=== QUERY SYNTAX REQUIREMENTS ===', siemGuide, edrGuide].filter(Boolean).join('\n');
 }
