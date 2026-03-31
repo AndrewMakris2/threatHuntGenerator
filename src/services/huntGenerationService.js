@@ -464,10 +464,21 @@ Your hunts must be:
 4. Threat-intelligence backed — ground each hunt in real observed attacker behavior with specific TTPs
 5. Actionable on findings — tell the analyst exactly what to do when they find something
 6. Honest about false positives — provide concrete FP reduction techniques
+7. Rich with queries — generate AT LEAST 4 queries per hunt: (a) initial broad sweep to establish scope, (b) refined targeted detection with tight filters, (c) time-based or statistical correlation to surface anomalies, (d) EDR/endpoint-level process/file/network query
+8. Deeply detailed hunt steps — each step must be a full 1-2 sentence instruction with exact tool names, console paths, field names, filter values, or commands to run. Write a MINIMUM of 9 steps per hunt. Follow this progression: validate data sources → run initial scoping query → identify anomalies → pivot on suspicious results → cross-correlate across data sources → reconstruct timeline → assess scope/blast radius → extract IOCs → document findings
+9. Thorough whatToLookFor — at least 5 specific artifacts, each with the exact field name, expected value or pattern, threshold or statistical baseline where applicable
 
 Return ONLY a valid JSON array — no markdown, no code fences, no preamble, no explanation. Just the raw JSON array starting with [ and ending with ].`;
 
   const userPrompt = `Generate exactly ${maxHunts} threat hunt scenarios for this specific environment. Every field must reference their actual tools, platforms, and data — no generic placeholders.
+
+CRITICAL DETAIL REQUIREMENTS — do not skip or abbreviate:
+- huntSteps: minimum 9 steps, each a full 1-2 sentence instruction with tool names, console paths, exact field names, and commands
+- exampleQueries: minimum 4 queries — broad sweep, refined detection, statistical/time-based anomaly, EDR endpoint query
+- whatToLookFor: minimum 5 items with exact field names and values/thresholds
+- analystTips: minimum 3 actionable tips specific to this technique and environment
+- investigationSteps: minimum 5 steps covering triage, pivot, lateral movement check, data exposure check, escalation decision
+- suspiciousBehaviors: minimum 5 specific observables with field names and patterns
 
 === ENVIRONMENT PROFILE ===
 Company: ${profile.companyName || 'Unknown'}
@@ -536,46 +547,64 @@ Return a JSON array. Each element must follow this exact structure — populate 
   ],
 
   "huntSteps": [
-    "Step 1 — [Verb] [specific action]: [exact what to do, which tool/console to open, which query to run or filter to apply]",
-    "Step 2 — ...",
-    "Step 3 — ...",
-    "Step 4 — ...",
-    "Step 5 — ...",
-    "Step 6 — ...",
-    "Step 7 — Document findings: Record any anomalies found, IOCs collected, systems affected, and timeline in your case management system"
+    "Step 1 — Validate data sources: Open [specific console/tool] and confirm [exact table/index/log source] is receiving events within the last 24 hours — check record count and most recent timestamp to rule out ingestion gaps",
+    "Step 2 — Run initial scoping query: Execute the broad sweep query below in [SIEM name] to identify the full population of events matching this technique over the past 30 days — note total count and peak activity periods",
+    "Step 3 — Identify anomalies: Sort results by [specific field] and flag any accounts, hosts, or IPs that appear in fewer than 3% of your baseline — these outliers are your first pivots",
+    "Step 4 — Pivot on suspicious results: For each flagged entity, open [EDR console/SIEM] and pull the full process tree / session timeline for the 2-hour window surrounding the suspicious event",
+    "Step 5 — Cross-correlate data sources: Join [log source A] with [log source B] on the shared key field to confirm whether the suspicious activity correlates with [authentication event / network connection / file write]",
+    "Step 6 — Reconstruct the timeline: Build a chronological event chain from initial access indicator to the observed activity — note any gaps longer than 10 minutes that may indicate dwell time",
+    "Step 7 — Assess scope and blast radius: Run the targeted query scoped to the past 90 days to determine how long this activity has been occurring and whether it spans multiple hosts or accounts",
+    "Step 8 — Extract IOCs: Collect all relevant indicators — IP addresses, domains, hashes, user accounts, process names — and tag them in your threat intel platform",
+    "Step 9 — Document findings: Record all anomalies, IOCs, affected assets, timeline, and confidence level in your case management system; escalate if confirmed malicious activity is found"
   ],
 
   "exampleQueries": [
     {
       "platform": "${profile.siemPlatform || 'SIEM'}",
       "language": "<kql | spl | aql | yaral | eql>",
-      "description": "What this query detects and any tuning notes",
+      "description": "Broad initial sweep — establishes baseline and identifies the full population of events to triage",
       "query": "<syntactically correct, runnable query using correct table/index names for this platform — not pseudocode>"
+    },
+    {
+      "platform": "${profile.siemPlatform || 'SIEM'}",
+      "language": "<kql | spl | aql | yaral | eql>",
+      "description": "Targeted refined detection — tighter filters to surface high-confidence indicators with low noise",
+      "query": "<refined query with exclusions and threshold filters applied>"
+    },
+    {
+      "platform": "${profile.siemPlatform || 'SIEM'}",
+      "language": "<kql | spl | aql | yaral | eql>",
+      "description": "Statistical correlation or time-based anomaly detection — surfaces outliers against a calculated baseline",
+      "query": "<aggregation/statistical query using summarize, stats, or equivalent to find anomalies>"
     },
     {
       "platform": "${profile.edrPlatform || 'EDR'}",
       "language": "<edr-specific query language>",
-      "description": "EDR telemetry query for process/network/file events",
-      "query": "<syntactically correct query for this EDR platform>"
+      "description": "EDR endpoint-level query — process, file, network, or registry telemetry for this technique",
+      "query": "<syntactically correct EDR query using the correct field names and event types for this platform>"
     }
   ],
 
   "suspiciousBehaviors": [
-    "Specific observable behavior 1 — what it looks like in the data (include field names/values where possible)",
-    "Specific observable behavior 2",
-    "Specific observable behavior 3",
-    "Specific observable behavior 4"
+    "Specific observable behavior 1 — exact field name and value pattern that indicates malicious activity",
+    "Specific observable behavior 2 — process/parent relationship or command-line pattern to flag",
+    "Specific observable behavior 3 — network indicator or connection pattern",
+    "Specific observable behavior 4 — authentication or access pattern anomaly",
+    "Specific observable behavior 5 — file system or registry artifact specific to this technique"
   ],
 
   "falsePositives": [
-    "Common FP scenario 1 — how to distinguish it from true positives",
-    "Common FP scenario 2 — filter or exclusion to apply"
+    "Common FP scenario 1 — specific legitimate tool or process that triggers this detection and how to confirm it is benign",
+    "Common FP scenario 2 — admin or IT activity pattern that resembles this technique, with the filter or exclusion to apply",
+    "Common FP scenario 3 — scheduled task, service account, or automation that generates matching events"
   ],
 
   "investigationSteps": [
-    "When you find a match: Step 1 — [immediate triage action]",
-    "Step 2 — [lateral movement / scope check]",
-    "Step 3 — [containment or escalation decision point]"
+    "When you find a match: immediately [triage action] — check [specific field] to determine if the account/host is a known admin or service account",
+    "Step 2 — Pull the full process tree in [EDR console] and look for [specific indicator] that confirms malicious intent vs legitimate use",
+    "Step 3 — Check lateral movement: query [log source] for any authentication events from the suspicious host/account within the preceding and following 30-minute window",
+    "Step 4 — Assess data exposure: determine whether [sensitive data type] was accessed or exfiltrated by reviewing [specific log source or DLP tool]",
+    "Step 5 — Escalation decision: if [specific confirmed indicator] is present, escalate to IR immediately; otherwise continue monitoring with enhanced logging"
   ],
 
   "detectionOpportunity": "How to operationalize this hunt into a permanent detection rule — what threshold, timeframe, and exclusions would make a reliable alert",
@@ -583,15 +612,17 @@ Return a JSON array. Each element must follow this exact structure — populate 
   "huntMethodology": "2-3 sentences explaining: (1) the type of hunt — hypothesis-driven, baseline deviation, or threat-intel-driven; (2) the analytical approach and why this specific technique surfaces the attacker behavior; (3) how the data sources chain together to form the detection logic",
 
   "whatToLookFor": [
-    "Specific artifact with exact field name and value — e.g. 'CommandLine field containing -EncodedCommand with Base64 payload length >200 chars'",
-    "Statistical anomaly — e.g. 'User authenticating from 3+ countries within a 4-hour window'",
-    "Behavioral pattern — e.g. 'Parent process svchost.exe spawning cmd.exe that initiates an outbound connection within 60 seconds'",
-    "Threshold or baseline deviation — e.g. 'Process creating >50 files with .locked extension within 5 minutes'"
+    "Artifact 1 — exact field name and value pattern: e.g. 'CommandLine field containing -EncodedCommand with Base64 string >200 chars indicates obfuscated payload execution'",
+    "Artifact 2 — process relationship: e.g. 'ParentProcessName = svchost.exe with ChildProcess = cmd.exe or powershell.exe is anomalous outside of known patch management windows'",
+    "Artifact 3 — statistical anomaly: e.g. 'UserPrincipalName appearing in SigninLogs from 3+ distinct countries within a 4-hour window — expected baseline is 1 country per session'",
+    "Artifact 4 — threshold indicator: e.g. 'TargetFileName extension changes >50 times per minute from a single process is consistent with ransomware encryption behavior'",
+    "Artifact 5 — network indicator: e.g. 'Outbound DNS queries to domains registered <30 days ago with entropy score >3.5 suggest DGA or C2 beaconing'"
   ],
 
   "analystTips": [
-    "Time-saving shortcut or common mistake to avoid when running this specific hunt",
-    "Context that helps interpret ambiguous or borderline results for this technique"
+    "Tip 1 — time-saving shortcut: specific filter or pivot that dramatically reduces noise when running this hunt in this environment",
+    "Tip 2 — common mistake: what analysts typically misinterpret as malicious for this technique and how to quickly rule it out",
+    "Tip 3 — context for results: what baseline or environmental factor to check before concluding a finding is a true positive"
   ],
 
   "recommendedLogSources": [
