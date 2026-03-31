@@ -8,7 +8,6 @@ import {
   signOut as firebaseSignOut,
   multiFactor,
   TotpMultiFactorGenerator,
-  getMultiFactorSession,
   getMultiFactorResolver,
 } from 'firebase/auth';
 import { auth, isFirebaseEnabled } from '../lib/firebase';
@@ -71,7 +70,7 @@ export function AuthProvider({ children }) {
   async function startMFAEnrollment() {
     const user = auth.currentUser;
     if (!user) throw new Error('Must be signed in to enable MFA');
-    const session = await getMultiFactorSession(user);
+    const session = await multiFactor(user).getSession();
     const secret  = await TotpMultiFactorGenerator.generateSecret(session);
     const qrUrl   = secret.generateQrCodeUrl(user.email, 'Phantom Hunter');
     return { secret, qrUrl };
