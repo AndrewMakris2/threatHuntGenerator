@@ -389,6 +389,9 @@ function normalizeAIHunts(raw, profile) {
         falsePositives:      h.falsePositives     || h.false_positives     || [],
         investigationSteps:  h.investigationSteps || h.investigation_steps || [],
         iocTypes:            h.iocTypes           || h.ioc_types           || [],
+        huntMethodology:     h.huntMethodology    || h.hunt_methodology    || '',
+        whatToLookFor:       h.whatToLookFor      || h.what_to_look_for    || [],
+        analystTips:         h.analystTips        || h.analyst_tips        || [],
         recommendedLogSources: h.recommendedLogSources || h.recommended_log_sources || [],
         recommendedTools:    h.recommendedTools   || h.recommended_tools   || [],
         tags:                h.tags               || [],
@@ -576,6 +579,20 @@ Return a JSON array. Each element must follow this exact structure — populate 
   ],
 
   "detectionOpportunity": "How to operationalize this hunt into a permanent detection rule — what threshold, timeframe, and exclusions would make a reliable alert",
+
+  "huntMethodology": "2-3 sentences explaining: (1) the type of hunt — hypothesis-driven, baseline deviation, or threat-intel-driven; (2) the analytical approach and why this specific technique surfaces the attacker behavior; (3) how the data sources chain together to form the detection logic",
+
+  "whatToLookFor": [
+    "Specific artifact with exact field name and value — e.g. 'CommandLine field containing -EncodedCommand with Base64 payload length >200 chars'",
+    "Statistical anomaly — e.g. 'User authenticating from 3+ countries within a 4-hour window'",
+    "Behavioral pattern — e.g. 'Parent process svchost.exe spawning cmd.exe that initiates an outbound connection within 60 seconds'",
+    "Threshold or baseline deviation — e.g. 'Process creating >50 files with .locked extension within 5 minutes'"
+  ],
+
+  "analystTips": [
+    "Time-saving shortcut or common mistake to avoid when running this specific hunt",
+    "Context that helps interpret ambiguous or borderline results for this technique"
+  ],
 
   "recommendedLogSources": [
     "Specific log source 1 — exact table/index name for their SIEM (e.g. 'SigninLogs table in Microsoft Sentinel')",

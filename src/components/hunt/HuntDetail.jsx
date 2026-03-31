@@ -225,6 +225,12 @@ function OverviewTab({ hunt }) {
         <p className="hunt-detail-body-text">{hunt.hypothesis}</p>
       </Section>
 
+      {hunt.huntMethodology && (
+        <Section title="Hunt Methodology" icon={Zap} iconColor="var(--accent-primary)">
+          <p className="hunt-detail-body-text">{hunt.huntMethodology}</p>
+        </Section>
+      )}
+
       <Section title="MITRE ATT&CK Techniques" icon={Layers}>
         <div className="hunt-detail-mitre-grid">
           {(hunt.mitreTechniques || []).map((entry, i) => {
@@ -302,6 +308,19 @@ function HuntStepsTab({ hunt }) {
           </div>
         ))}
       </div>
+
+      {hunt.analystTips?.length > 0 && (
+        <Section title="Analyst Tips" icon={Zap} iconColor="var(--accent-primary)">
+          <div className="hunt-detail-steps">
+            {hunt.analystTips.map((tip, i) => (
+              <div key={i} className="hunt-detail-step">
+                <div className="hunt-detail-step-number">{i + 1}</div>
+                <p className="hunt-detail-step-text">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {hunt.investigationSteps?.length > 0 && (
         <Section title="When You Find Something — Investigation Steps" icon={ArrowRight} iconColor="var(--severity-high)">
@@ -384,7 +403,13 @@ function IOCsTab({ hunt }) {
 
   return (
     <div className="tab-content">
-      <Section title="Suspicious Behaviors to Look For" icon={AlertTriangle}>
+      {hunt.whatToLookFor?.length > 0 && (
+        <Section title="What to Look For" icon={Target} iconColor="var(--accent-primary)">
+          <IOCList items={hunt.whatToLookFor} icon={Target} iconColor="var(--accent-primary)" itemClass="hunt-detail-ioc-suspicious" />
+        </Section>
+      )}
+
+      <Section title="Suspicious Behaviors" icon={AlertTriangle}>
         <IOCList items={hunt.suspiciousBehaviors} icon={AlertTriangle} itemClass="hunt-detail-ioc-suspicious" bullet="⚠" />
       </Section>
 
