@@ -337,18 +337,62 @@ async function callAI(aiSettings, systemPrompt, userPrompt) {
 }
 
 function extractJSON(text) {
-  // Strip markdown code fences
+  // Strip markdown code fences first
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/s);
-  if (fenced) return fenced[1].trim();
-  // Find outermost JSON array
-  const arrStart = text.indexOf('[');
-  const arrEnd   = text.lastIndexOf(']');
-  if (arrStart !== -1 && arrEnd > arrStart) return text.slice(arrStart, arrEnd + 1);
-  // Find outermost JSON object (might wrap array in { hunts: [...] })
-  const objStart = text.indexOf('{');
-  const objEnd   = text.lastIndexOf('}');
-  if (objStart !== -1 && objEnd > objStart) return text.slice(objStart, objEnd + 1);
-  return text.trim();
+  const candidate = fenced ? fenced[1].trim() : text;
+
+  // Try clean parse of a complete array
+  const arrStart = candidate.indexOf('[');
+  const arrEnd   = candidate.lastIndexOf(']');
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    const slice = candidate.slice(arrStart, arrEnd + 1);
+    try { JSON.parse(slice); return slice; } catch { /* truncated — fall through to repair */ }
+    // Response was cut off before the closing ] — salvage complete objects
+    return repairTruncatedJSONArray(candidate.slice(arrStart));
+  }
+
+  // Try outermost object (might wrap array in { hunts: [...] })
+  const objStart = candidate.indexOf('{');
+  const objEnd   = candidate.lastIndexOf('}');
+  if (objStart !== -1 && objEnd > objStart) return candidate.slice(objStart, objEnd + 1);
+
+  return candidate.trim();
+}
+
+/**
+ * Walk the truncated array character-by-character and collect every
+ * top-level JSON object that is fully balanced (depth returns to 0).
+ * Returns a syntactically valid JSON array of only the complete objects.
+ */
+function repairTruncatedJSONArray(text) {
+  const objects = [];
+  let depth    = 0;
+  let start    = -1;
+  let inStr    = false;
+  let escaped  = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped)          { escaped = false; continue; }
+    if (ch === '\\' && inStr) { escaped = true;  continue; }
+    if (ch === '"')       { inStr = !inStr;       continue; }
+    if (inStr)            continue;
+
+    if (ch === '{') {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        const obj = text.slice(start, i + 1);
+        try { JSON.parse(obj); objects.push(obj); } catch { /* skip malformed fragment */ }
+        start = -1;
+      }
+    }
+  }
+
+  if (objects.length === 0) throw new Error('No complete hunt objects found in truncated AI response');
+  return '[' + objects.join(',') + ']';
 }
 
 function normalizeAIHunts(raw, profile) {
@@ -415,8 +459,20 @@ function normalizeAIHunts(raw, profile) {
     });
 }
 
+// Per-provider safe hunt count ceilings — detailed schema is large; stay under token limits
+const PROVIDER_MAX_HUNTS = {
+  groq:      4,   // 8k token ceiling — fits ~4 fully-detailed hunts
+  anthropic: 8,
+  openai:    8,
+  azure:     8,
+  local:     6,
+};
+
 async function generateHuntsWithAI(profile, aiSettings, options = {}) {
-  const { maxHunts = 12, categories = [] } = options;
+  const providerCap = PROVIDER_MAX_HUNTS[aiSettings?.provider] ?? 8;
+  const { maxHunts = 6, categories = [] } = options;
+  // Never ask for more hunts than the provider can safely fit in one response
+  const safeMaxHunts = Math.min(maxHunts, providerCap);
 
   const cloudList    = (profile.cloudProviders || []).filter(c => c !== 'none').join(', ') || 'None';
   const osList       = (profile.operatingSystems || []).join(', ') || 'Unknown';
@@ -470,7 +526,7 @@ Your hunts must be:
 
 Return ONLY a valid JSON array — no markdown, no code fences, no preamble, no explanation. Just the raw JSON array starting with [ and ending with ].`;
 
-  const userPrompt = `Generate exactly ${maxHunts} threat hunt scenarios for this specific environment. Every field must reference their actual tools, platforms, and data — no generic placeholders.
+  const userPrompt = `Generate exactly ${safeMaxHunts} threat hunt scenarios for this specific environment. Every field must reference their actual tools, platforms, and data — no generic placeholders.
 
 CRITICAL DETAIL REQUIREMENTS — do not skip or abbreviate:
 - huntSteps: minimum 9 steps, each a full 1-2 sentence instruction with tool names, console paths, exact field names, and commands
