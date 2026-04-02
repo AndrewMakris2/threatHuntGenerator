@@ -18,6 +18,7 @@ import SavedHunts     from './pages/SavedHunts';
 import HuntSessions   from './pages/HuntSessions';
 import Settings       from './pages/Settings';
 import Auth           from './pages/Auth';
+import Coverage       from './pages/Coverage';
 
 import './styles/global.css';
 import './pages/Auth.css';
@@ -126,6 +127,11 @@ export default function App() {
             <Route path="/history" element={
               <ProtectedRoute>
                 <AppShell><HuntSessions /></AppShell>
+              </ProtectedRoute>
+            } />
+            <Route path="/coverage" element={
+              <ProtectedRoute>
+                <AppShell><Coverage /></AppShell>
               </ProtectedRoute>
             } />
             <Route path="/settings" element={

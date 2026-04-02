@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Crosshair,
   BookmarkCheck, Settings, Target,
-  Sparkles, TrendingUp, History,
+  Sparkles, TrendingUp, History, Shield,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../../context/AppContext';
 import './Sidebar.css';
@@ -12,28 +12,29 @@ const NAV_ITEMS = [
   {
     section: 'Overview',
     items: [
-      { to: '/',           icon: LayoutDashboard, label: 'Dashboard',      end: true },
+      { to: '/',          icon: LayoutDashboard, label: 'Dashboard',     end: true },
+      { to: '/coverage',  icon: Shield,           label: 'ATT&CK Coverage' },
     ],
   },
   {
     section: 'Hunt Workflow',
     items: [
-      { to: '/companies',  icon: Building2,       label: 'Companies'       },
-      { to: '/generate',   icon: Sparkles,         label: 'Hunt Generator' },
-      { to: '/results',    icon: Crosshair,        label: 'Hunt Results'   },
+      { to: '/companies', icon: Building2,  label: 'Companies'      },
+      { to: '/generate',  icon: Sparkles,   label: 'Hunt Generator' },
+      { to: '/results',   icon: Crosshair,  label: 'Hunt Results'   },
     ],
   },
   {
     section: 'Library',
     items: [
-      { to: '/saved',    icon: BookmarkCheck, label: 'Saved Hunts'  },
-      { to: '/history',  icon: History,       label: 'Hunt History' },
+      { to: '/saved',   icon: BookmarkCheck, label: 'Saved Hunts'  },
+      { to: '/history', icon: History,       label: 'Hunt History' },
     ],
   },
   {
     section: 'System',
     items: [
-      { to: '/settings', icon: Settings,         label: 'Settings'        },
+      { to: '/settings', icon: Settings, label: 'Settings' },
     ],
   },
 ];

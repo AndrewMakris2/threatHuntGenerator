@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Crosshair, BookmarkCheck, TrendingUp, AlertTriangle,
   Sparkles, ArrowRight, Shield, LayoutDashboard,
-  Building2, ChevronRight,
+  Building2, ChevronRight, Radio, Star, Clock,
+  RefreshCw, ExternalLink, Activity, Target,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import StatCard from '../components/common/StatCard';
@@ -13,19 +14,35 @@ import HuntCard from '../components/hunt/HuntCard';
 import HuntDetail from '../components/hunt/HuntDetail';
 import Modal from '../components/common/Modal';
 import { getEnvironmentRiskScore, getCategoryStats } from '../services/huntGenerationService';
+import {
+  fetchCISAKEV, getHuntOfTheWeek, getReHuntReminders, getWeeklyActivity,
+} from '../services/threatIntelService';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const { state } = useApp();
-  const navigate = useNavigate();
-  const [activeHunt, setActiveHunt] = React.useState(null);
+  const navigate  = useNavigate();
+  const [activeHunt,  setActiveHunt]  = useState(null);
+  const [intelFeed,   setIntelFeed]   = useState([]);
+  const [intelLoading, setIntelLoading] = useState(true);
 
-  const { companyProfile: profile, generatedHunts: hunts, savedHunts, profileComplete } = state;
+  const { companyProfile: profile, generatedHunts: hunts, savedHunts, profileComplete, huntSessions } = state;
 
-  const riskScore   = profileComplete ? getEnvironmentRiskScore(profile) : 0;
-  const catStats    = getCategoryStats(hunts);
-  const topHunts    = [...hunts].sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 3);
+  const riskScore     = profileComplete ? getEnvironmentRiskScore(profile) : 0;
+  const catStats      = getCategoryStats(hunts);
+  const topHunts      = [...hunts].sort((a, b) => b.relevanceScore - a.relevanceScore).slice(0, 3);
   const criticalHunts = hunts.filter(h => h.severity === 'critical').length;
+  const huntOfWeek    = getHuntOfTheWeek();
+  const reHuntItems   = getReHuntReminders(huntSessions || []);
+  const weeklyActivity = getWeeklyActivity(huntSessions || []);
+  const maxActivity   = Math.max(...weeklyActivity.map(w => w.count), 1);
+
+  useEffect(() => {
+    fetchCISAKEV(8).then(data => {
+      setIntelFeed(data);
+      setIntelLoading(false);
+    });
+  }, []);
 
   // If no profile, show setup CTA
   if (!profileComplete) {
@@ -230,6 +247,166 @@ export default function Dashboard() {
           </button>
         </div>
       )}
+
+      {/* ── Hunt of the Week ── */}
+      <div className="dashboard-hotw card mb-6">
+        <div className="dashboard-hotw-badge">
+          <Star size={11} /> HUNT OF THE WEEK
+        </div>
+        <div className="dashboard-hotw-body">
+          <div className="dashboard-hotw-left">
+            <div className="dashboard-hotw-technique">{huntOfWeek.technique}</div>
+            <h2 className="dashboard-hotw-title">{huntOfWeek.title}</h2>
+            <p className="dashboard-hotw-desc">{huntOfWeek.description}</p>
+            <div className="dashboard-hotw-why">
+              <AlertTriangle size={12} style={{ color: 'var(--severity-high)', flexShrink: 0 }} />
+              <span>{huntOfWeek.whyNow}</span>
+            </div>
+            <div className="dashboard-hotw-actors">
+              <span className="label">Known actors:</span>
+              <span style={{ color: 'var(--severity-critical)', fontSize: 'var(--text-xs)', fontWeight: 600 }}>{huntOfWeek.actors}</span>
+            </div>
+          </div>
+          <div className="dashboard-hotw-right">
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/generate')}
+            >
+              <Sparkles size={14} /> Generate This Hunt
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => navigate('/coverage')}
+            >
+              <Target size={13} /> View Coverage
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Re-hunt Reminders + Weekly Activity ── */}
+      <div className="dashboard-lower-row mb-6">
+
+        {/* Re-hunt Reminders */}
+        <div className="card">
+          <div className="section-header" style={{ marginBottom: 'var(--space-4)' }}>
+            <h2 className="section-title">
+              <Clock size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle', color: 'var(--severity-medium)' }} />
+              Re-hunt Reminders
+            </h2>
+            {reHuntItems.length > 0 && (
+              <span className="badge badge-medium">{reHuntItems.length} due</span>
+            )}
+          </div>
+          {reHuntItems.length === 0 ? (
+            <div className="empty-state" style={{ padding: 'var(--space-5)' }}>
+              <div className="empty-state-description">
+                {(huntSessions || []).length === 0
+                  ? 'Run your first hunt session to start tracking re-hunt schedules.'
+                  : 'All recent hunts are up to date — check back in 60 days.'}
+              </div>
+            </div>
+          ) : (
+            <div className="dashboard-reminders">
+              {reHuntItems.map(({ session, daysAgo }) => (
+                <div key={session.id} className="dashboard-reminder-row">
+                  <div className="dashboard-reminder-dot" />
+                  <div className="dashboard-reminder-info">
+                    <div className="dashboard-reminder-company">{session.companyName}</div>
+                    <div className="dashboard-reminder-meta">{session.huntCount} hunts · {daysAgo} days ago</div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => navigate('/generate')}
+                    style={{ flexShrink: 0 }}
+                  >
+                    <RefreshCw size={11} /> Re-run
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Weekly Activity */}
+        <div className="card">
+          <div className="section-header" style={{ marginBottom: 'var(--space-4)' }}>
+            <h2 className="section-title">
+              <Activity size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle', color: 'var(--accent-primary)' }} />
+              Hunt Activity
+            </h2>
+            <span className="badge badge-info">Last 8 weeks</span>
+          </div>
+          <div className="dashboard-activity-chart">
+            {weeklyActivity.map((w, i) => (
+              <div key={i} className="dashboard-activity-col">
+                <div className="dashboard-activity-bar-wrap">
+                  <div
+                    className="dashboard-activity-bar"
+                    style={{ height: `${maxActivity > 0 ? (w.count / maxActivity) * 100 : 0}%` }}
+                    title={`${w.count} hunts`}
+                  />
+                </div>
+                {w.count > 0 && (
+                  <div className="dashboard-activity-count">{w.count}</div>
+                )}
+                <div className="dashboard-activity-label">{w.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Live Threat Intelligence Feed ── */}
+      <div className="mb-6">
+        <div className="section-header">
+          <h2 className="section-title">
+            <Radio size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle', color: 'var(--accent-primary)' }} />
+            Live Threat Intelligence
+            <span className="badge badge-info" style={{ marginLeft: 8 }}>CISA KEV</span>
+          </h2>
+          <a
+            href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-ghost btn-sm"
+          >
+            Full catalog <ExternalLink size={11} />
+          </a>
+        </div>
+        {intelLoading ? (
+          <div className="dashboard-intel-loading">
+            <div className="spinner" />
+            <span>Fetching latest threat data...</span>
+          </div>
+        ) : (
+          <div className="dashboard-intel-grid">
+            {intelFeed.map(item => (
+              <a
+                key={item.id}
+                href={item.url}
+                target="_blank"
+                rel="noreferrer"
+                className="dashboard-intel-card"
+              >
+                <div className="dashboard-intel-card-top">
+                  <span className="dashboard-intel-cve">{item.id}</span>
+                  <span className="dashboard-intel-date">
+                    {new Date(item.dateAdded).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+                <div className="dashboard-intel-vendor">{item.vendor} — {item.product}</div>
+                <div className="dashboard-intel-title">{item.title}</div>
+                <div className="dashboard-intel-desc">{item.description}</div>
+                <div className="dashboard-intel-footer">
+                  <span className="badge badge-critical" style={{ fontSize: '9px' }}>Active Exploit</span>
+                  <ExternalLink size={10} style={{ color: 'var(--text-muted)', marginLeft: 'auto' }} />
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Hunt Detail Modal */}
       <Modal
