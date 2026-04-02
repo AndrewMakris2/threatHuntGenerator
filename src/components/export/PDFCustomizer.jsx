@@ -2,8 +2,8 @@
  * PDFCustomizer — Pre-export PDF branding/options modal
  * Allows customizing colors, logo, analyst name, sections before PDF download
  */
-import React, { useState } from 'react';
-import { X, FileText, Download, Eye, Check } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, FileText, Download, Eye, Check, Upload } from 'lucide-react';
 import { exportSingleHuntAsPDF } from '../../services/exportService';
 
 const CLASSIFICATION_OPTIONS = [
@@ -26,6 +26,8 @@ const SECTION_OPTIONS = [
 ];
 
 export default function PDFCustomizer({ hunt, activeCompany, onClose }) {
+  const logoFileRef = useRef(null);
+
   const [options, setOptions] = useState(() => ({
     reportTitle: hunt?.title || 'Threat Hunt Report',
     analystName: activeCompany?.analystName || '',
@@ -47,6 +49,14 @@ export default function PDFCustomizer({ hunt, activeCompany, onClose }) {
 
   function set(field, value) {
     setOptions(o => ({ ...o, [field]: value }));
+  }
+
+  function handleLogoFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => set('logoUrl', ev.target.result);
+    reader.readAsDataURL(file);
   }
 
   function toggleSection(key) {
@@ -258,13 +268,38 @@ export default function PDFCustomizer({ hunt, activeCompany, onClose }) {
                 </div>
               </Field>
             </FieldRow>
-            <Field label="Company Logo URL">
-              <input
-                className="form-input"
-                value={options.logoUrl}
-                onChange={e => set('logoUrl', e.target.value)}
-                placeholder="https://example.com/logo.png (optional)"
-              />
+            <Field label="Company Logo">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => logoFileRef.current?.click()}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+                  >
+                    <Upload size={13} /> Upload File
+                  </button>
+                  <input
+                    ref={logoFileRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={handleLogoFile}
+                  />
+                  {options.logoUrl && options.logoUrl.startsWith('data:') && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--status-success)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Check size={11} /> Image uploaded
+                    </span>
+                  )}
+                </div>
+                <input
+                  className="form-input"
+                  value={options.logoUrl.startsWith('data:') ? '' : options.logoUrl}
+                  onChange={e => set('logoUrl', e.target.value)}
+                  placeholder="Or paste a URL: https://example.com/logo.png"
+                  style={{ fontSize: '0.8rem' }}
+                />
+              </div>
             </Field>
           </Section>
 

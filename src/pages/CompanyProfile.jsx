@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, RotateCcw, ChevronRight, ChevronLeft, Sparkles, Info } from 'lucide-react';
+import { Save, RotateCcw, ChevronRight, ChevronLeft, Sparkles, Info, Upload, X } from 'lucide-react';
 import { useApp, ACTIONS } from '../context/AppContext';
 import ProfileStepper, { STEPS } from '../components/profile/ProfileStepper';
 import {
@@ -15,6 +15,15 @@ export default function CompanyProfile() {
   const { state, dispatch, addToast } = useApp();
   const navigate = useNavigate();
   const [step, setStep] = useState(state.profileStep || 0);
+  const logoFileRef = useRef(null);
+
+  function handleLogoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setField('logoUrl', ev.target.result);
+    reader.readAsDataURL(file);
+  }
   const profile = state.companyProfile;
 
   function setField(field, value) {
@@ -101,6 +110,44 @@ export default function CompanyProfile() {
                 />
               </FormGroup>
             </div>
+
+            <FormGroup label="Company Logo (optional — used in PDF exports)">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                {profile.logoUrl && (
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <img
+                      src={profile.logoUrl}
+                      alt="Company logo"
+                      style={{ height: 48, maxWidth: 160, objectFit: 'contain', borderRadius: 6, border: '1px solid var(--border-subtle)', background: '#fff', padding: 4 }}
+                      onError={e => e.target.style.display = 'none'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setField('logoUrl', '')}
+                      style={{ position: 'absolute', top: -6, right: -6, background: 'var(--severity-critical)', border: 'none', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => logoFileRef.current?.click()}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Upload size={13} /> {profile.logoUrl ? 'Replace Logo' : 'Upload Logo'}
+                </button>
+                <input
+                  ref={logoFileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={handleLogoUpload}
+                />
+                <span className="form-hint" style={{ margin: 0 }}>PNG, JPG, SVG, or WebP</span>
+              </div>
+            </FormGroup>
 
             <div className="grid-2">
               <FormGroup label="Industry" required>

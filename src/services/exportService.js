@@ -288,10 +288,11 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
   const queries = (hunt.exampleQueries || []).map(q => `
     <div class="query-block">
       <div class="query-header">
-        <span class="pill pill-blue">${q.platform}</span>
-        <span class="pill pill-purple">${(q.language || 'QUERY').toUpperCase()}</span>
+        <span class="pill pill-blue">${escapeHtml(q.platform || '')}</span>
+        <span class="pill pill-purple">${escapeHtml((q.language || 'QUERY').toUpperCase())}</span>
       </div>
-      <pre class="code">${escapeHtml(q.query)}</pre>
+      ${q.description ? `<p style="font-size:11.5px;color:#6b7280;margin:4px 0 6px;font-style:italic;">${escapeHtml(q.description)}</p>` : ''}
+      <pre class="code">${escapeHtml(q.query || '')}</pre>
     </div>
   `).join('');
 
@@ -302,9 +303,19 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
     </div>
   `).join('');
 
-  const mitre = (hunt.mitreTechniques || []).map(t =>
-    `<span class="mitre-tag">${t}</span>`
-  ).join('');
+  const investigationSteps = (hunt.investigationSteps || []).map((s, i) => `
+    <div class="step">
+      <div class="step-num" style="background:#fff3e0;border-color:#f97316;color:#ea580c;">${i + 1}</div>
+      <div class="step-text">${escapeHtml(s)}</div>
+    </div>
+  `).join('');
+
+  // MITRE techniques are objects {id, name, tactic} — extract id and name
+  const mitre = (hunt.mitreTechniques || []).map(t => {
+    const id   = typeof t === 'string' ? t : (t?.id || '');
+    const name = typeof t === 'object' ? (t?.name || '') : '';
+    return `<span class="mitre-tag">${escapeHtml(id)}${name ? ` — ${escapeHtml(name)}` : ''}</span>`;
+  }).join('');
 
   const listItems = (arr) =>
     (arr || []).map(s => `<li>${escapeHtml(s)}</li>`).join('');
@@ -532,8 +543,11 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
       </span>
       ${hunt.category ? `<span class="pill pill-blue">${escapeHtml(hunt.category)}</span>` : ''}
       ${hunt.difficulty ? `<span class="pill pill-purple">${escapeHtml(hunt.difficulty)}</span>` : ''}
-      ${(hunt.mitreTechniques || []).slice(0, 3).map(t => `<span class="pill pill-red">${escapeHtml(t)}</span>`).join('')}
-      ${(hunt.mitreTechniques || []).length > 3 ? `<span class="pill pill-red">+${hunt.mitreTechniques.length - 3} more</span>` : ''}
+      ${(hunt.mitreTechniques || []).slice(0, 3).map(t => {
+        const id = typeof t === 'string' ? t : (t?.id || '');
+        return `<span class="pill pill-red">${escapeHtml(id)}</span>`;
+      }).join('')}
+      ${(hunt.mitreTechniques || []).length > 3 ? `<span class="pill pill-red">+${(hunt.mitreTechniques || []).length - 3} more</span>` : ''}
     </div>
   </div>
 
@@ -552,7 +566,7 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
       <div class="metric-label">Coverage</div>
     </div>
     <div class="metric">
-      <div class="metric-value">${escapeHtml(hunt.estimatedTime || 'N/A')}</div>
+      <div class="metric-value">${escapeHtml(hunt.estimatedHuntTime || hunt.estimatedTime || 'N/A')}</div>
       <div class="metric-label">Est. Time</div>
     </div>
     <div class="metric">
@@ -573,6 +587,15 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
       </div>
     </div>
 
+    <!-- Threat Context -->
+    ${hunt.threatContext ? `
+    <div class="section">
+      <div class="callout callout-danger">
+        <div class="callout-label">Threat Intelligence Context</div>
+        <p>${escapeHtml(hunt.threatContext)}</p>
+      </div>
+    </div>` : ''}
+
     <!-- Hypothesis -->
     <div class="section">
       <div class="section-title">Threat Hypothesis</div>
@@ -580,6 +603,13 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
         <p>${escapeHtml(hunt.hypothesis || '')}</p>
       </div>
     </div>
+
+    <!-- Hunt Methodology -->
+    ${hunt.huntMethodology ? `
+    <div class="section">
+      <div class="section-title">Hunt Methodology</div>
+      <p style="font-size:12.5px;color:#1f2937;line-height:1.65;">${escapeHtml(hunt.huntMethodology)}</p>
+    </div>` : ''}
 
     <!-- MITRE Techniques -->
     ${(hunt.mitreTechniques || []).length > 0 ? `
@@ -600,7 +630,19 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
     <div class="section">
       <div class="section-title">Hunt Procedure (${(hunt.huntSteps || []).length} Steps)</div>
       ${steps}
+    </div>
+
+    ${hunt.analystTips?.length > 0 ? `
+    <div class="section">
+      <div class="section-title">Analyst Tips</div>
+      <ul>${listItems(hunt.analystTips)}</ul>
     </div>` : ''}
+
+    ${hunt.investigationSteps?.length > 0 ? `
+    <div class="section">
+      <div class="section-title">When You Find Something — Investigation Steps</div>
+      ${investigationSteps}
+    </div>` : ''}` : ''}
 
     <!-- Queries -->
     ${sections.queries !== false && (hunt.exampleQueries || []).length > 0 ? `
@@ -611,24 +653,35 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
 
     <!-- IOCs / Behaviors -->
     ${sections.iocs !== false ? `
+    ${hunt.whatToLookFor?.length > 0 ? `
+    <div class="section">
+      <div class="section-title">What to Look For</div>
+      <ul>${listItems(hunt.whatToLookFor)}</ul>
+    </div>` : ''}
+
     <div class="section">
       <div class="grid-2">
         <div>
           <div class="section-title">Suspicious Behaviors</div>
           <ul>${listItems(hunt.suspiciousBehaviors)}</ul>
         </div>
+        ${(hunt.iocTypes || []).length > 0 ? `
+        <div>
+          <div class="section-title">IOC Types to Collect</div>
+          <ul>${listItems(hunt.iocTypes)}</ul>
+        </div>` : (hunt.truePositiveIndicators || []).length > 0 ? `
         <div>
           <div class="section-title">True Positive Indicators</div>
           <ul>${listItems(hunt.truePositiveIndicators)}</ul>
-        </div>
+        </div>` : '<div></div>'}
       </div>
     </div>
 
-    ${(hunt.falsePositiveIndicators || []).length > 0 ? `
+    ${(() => { const fp = [...(hunt.falsePositives || []), ...(hunt.falsePositiveIndicators || [])]; return fp.length > 0 ? `
     <div class="section">
-      <div class="section-title">False Positive Indicators</div>
-      <ul>${listItems(hunt.falsePositiveIndicators)}</ul>
-    </div>` : ''}
+      <div class="section-title">False Positive Reduction</div>
+      <ul>${listItems(fp)}</ul>
+    </div>` : ''; })()}
 
     ${hunt.triageGuidance ? `
     <div class="section">
@@ -644,12 +697,20 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
       <ul>${listItems(hunt.escalationRecommendations)}</ul>
     </div>` : ''}` : ''}
 
-    <!-- Remediation -->
-    ${sections.remediation !== false && (hunt.remediationActions || []).length > 0 ? `
+    <!-- Remediation + Detection Opportunity -->
+    ${sections.remediation !== false ? `
+    ${(hunt.remediationActions || []).length > 0 ? `
     <div class="section">
       <div class="section-title">Remediation Actions</div>
       <ul>${listItems(hunt.remediationActions)}</ul>
     </div>` : ''}
+    ${hunt.detectionOpportunity ? `
+    <div class="section">
+      <div class="callout callout-info">
+        <div class="callout-label">Detection Opportunity</div>
+        <p>${escapeHtml(hunt.detectionOpportunity)}</p>
+      </div>
+    </div>` : ''}` : ''}
 
     <!-- Data Sources -->
     ${(hunt.dataSources || []).length > 0 ? `
