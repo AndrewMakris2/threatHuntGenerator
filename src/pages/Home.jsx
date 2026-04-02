@@ -1,13 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Sparkles, Shield, Target, Database, Zap, Radio,
+  Sparkles, Shield, Target, Database, Radio,
   ArrowRight, BookmarkCheck, Crosshair, TrendingUp,
   Building2, History, FileText, ChevronRight, Lock,
   Activity,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 import './Home.css';
 
 const FEATURES = [
@@ -79,7 +78,6 @@ const HOW_IT_WORKS = [
 export default function Home() {
   const navigate  = useNavigate();
   const { state } = useApp();
-  const { user }  = useAuth();
 
   const huntCount    = (state.generatedHunts || []).length;
   const savedCount   = (state.savedHunts || []).length;
