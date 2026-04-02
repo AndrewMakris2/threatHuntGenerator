@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield, Crosshair, CheckCircle, Circle, Sparkles,
-  TrendingUp, Target, ChevronDown, ChevronRight,
+  Shield, CheckCircle, Circle, Sparkles,
+  Target, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
