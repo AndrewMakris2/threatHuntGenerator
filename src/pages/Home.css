@@ -6,10 +6,11 @@
 .home-hero {
   position: relative;
   overflow: hidden;
-  padding: var(--space-12) var(--space-8);
-  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-6)) var(--space-10);
-  border-bottom: 1px solid var(--border-subtle);
-  background: linear-gradient(160deg, #0f0f0f 0%, #1a0000 50%, #0a0a0a 100%);
+  padding: var(--space-10) var(--space-6);
+  margin-bottom: var(--space-10);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, #111 0%, #1a0505 50%, #0d0d0d 100%);
 }
 
 .home-hero-glow {
@@ -126,7 +127,7 @@
 /* ── How it works ── */
 .home-how-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-4);
   position: relative;
 }
@@ -304,11 +305,10 @@
 /* ── Responsive ── */
 @media (max-width: 1024px) {
   .home-hero { padding: var(--space-8) var(--space-5); }
-  .home-how-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
-  .home-hero { padding: var(--space-6) var(--space-4); margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-8); }
+  .home-hero { padding: var(--space-6) var(--space-4); }
   .home-how-grid { grid-template-columns: 1fr; }
   .home-hero-actions { flex-direction: column; }
 }
