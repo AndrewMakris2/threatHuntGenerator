@@ -19,6 +19,7 @@ import HuntSessions   from './pages/HuntSessions';
 import Settings       from './pages/Settings';
 import Auth           from './pages/Auth';
 import Coverage       from './pages/Coverage';
+import Home          from './pages/Home';
 
 import './styles/global.css';
 import './pages/Auth.css';
@@ -95,6 +96,11 @@ export default function App() {
 
             {/* App shell routes — protected */}
             <Route path="/" element={
+              <ProtectedRoute>
+                <AppShell><Home /></AppShell>
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
               <ProtectedRoute>
                 <AppShell><Dashboard /></AppShell>
               </ProtectedRoute>

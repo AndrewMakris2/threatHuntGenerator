@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Crosshair,
   BookmarkCheck, Settings, Target,
-  Sparkles, TrendingUp, History, Shield,
+  Sparkles, TrendingUp, History, Shield, Home,
 } from 'lucide-react';
 import { useApp, ACTIONS } from '../../context/AppContext';
 import './Sidebar.css';
@@ -12,8 +12,9 @@ const NAV_ITEMS = [
   {
     section: 'Overview',
     items: [
-      { to: '/',          icon: LayoutDashboard, label: 'Dashboard',     end: true },
-      { to: '/coverage',  icon: Shield,           label: 'ATT&CK Coverage' },
+      { to: '/',           icon: Home,            label: 'Home',           end: true },
+      { to: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard'       },
+      { to: '/coverage',   icon: Shield,          label: 'ATT&CK Coverage' },
     ],
   },
   {
