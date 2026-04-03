@@ -100,9 +100,9 @@
   font-size: 9px;
   font-weight: var(--font-bold);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--text-muted);
-  padding: var(--space-3) var(--space-4) var(--space-1);
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.22);
+  padding: var(--space-4) var(--space-4) var(--space-1);
 }
 
 /* ── Nav items ── */
@@ -111,8 +111,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: 9px var(--space-4);
-  color: var(--text-muted);
+  padding: 8px var(--space-4);
+  color: rgba(255,255,255,0.38);
   text-decoration: none;
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -123,7 +123,7 @@
 }
 
 .sidebar-nav-item:hover {
-  color: var(--text-secondary);
+  color: rgba(255,255,255,0.65);
   background: rgba(255,255,255,0.03);
 }
 

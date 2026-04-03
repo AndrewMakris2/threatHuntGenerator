@@ -103,8 +103,7 @@
 
 /* ── Sections ── */
 .home-section {
-  margin-bottom: var(--space-12);
-  padding: 0 var(--space-2);
+  margin-bottom: var(--space-10);
 }
 
 .home-section-label {
@@ -117,10 +116,10 @@
 }
 
 .home-section-title {
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
   letter-spacing: -0.01em;
 }
 
@@ -188,7 +187,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s;
 }
 
 .home-feature-card:hover {

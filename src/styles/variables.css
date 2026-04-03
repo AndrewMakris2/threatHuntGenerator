@@ -7,8 +7,8 @@
   /* ── Background Layers ── */
   --bg-base:        #0a0a0a;
   --bg-surface:     #111111;
-  --bg-card:        #161616;
-  --bg-secondary:   #161616;
+  --bg-card:        #141414;
+  --bg-secondary:   #141414;
   --bg-tertiary:    #1e1e1e;
   --bg-card-hover:  #1e1e1e;
   --bg-elevated:    #252525;
@@ -16,9 +16,9 @@
   --bg-overlay:     rgba(0,0,0,0.88);
 
   /* ── Border ── */
-  --border-subtle:  rgba(255,255,255,0.05);
-  --border-default: rgba(255,255,255,0.09);
-  --border-strong:  rgba(255,255,255,0.16);
+  --border-subtle:  rgba(255,255,255,0.07);
+  --border-default: rgba(255,255,255,0.11);
+  --border-strong:  rgba(255,255,255,0.18);
   --border-accent:  rgba(220,38,38,0.5);
 
   /* ── Brand / Accent ── */
@@ -78,9 +78,9 @@
 
   /* ── Radius ── */
   --radius-sm:   0.25rem;
-  --radius-md:   0.4rem;
-  --radius-lg:   0.6rem;
-  --radius-xl:   0.75rem;
+  --radius-md:   0.45rem;
+  --radius-lg:   0.65rem;
+  --radius-xl:   0.8rem;
   --radius-2xl:  1rem;
   --radius-full: 9999px;
 
