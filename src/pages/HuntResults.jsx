@@ -37,7 +37,10 @@ export default function HuntResults() {
     if (catFilter)   list = list.filter(h => h.category === catFilter);
     if (sevFilter)   list = list.filter(h => h.severity === sevFilter);
     if (diffFilter)  list = list.filter(h => h.difficulty === diffFilter);
-    if (mitreFilter) list = list.filter(h => (h.mitreTechniques || []).some(t => getTechniqueById(t)?.tactic === mitreFilter));
+    if (mitreFilter) list = list.filter(h => (h.mitreTechniques || []).some(t => {
+      const id = typeof t === 'string' ? t : t?.id;
+      return getTechniqueById(id)?.tactic === mitreFilter || t?.tactic === mitreFilter;
+    }));
 
     list.sort((a, b) => {
       if (sortBy === 'relevance') return (b.relevanceScore || 0) - (a.relevanceScore || 0);
