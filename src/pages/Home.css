@@ -112,7 +112,7 @@
 /* ── Sections ── */
 .home-section {
   margin-bottom: var(--space-10);
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-6);
 }
 
 .home-section-label {
