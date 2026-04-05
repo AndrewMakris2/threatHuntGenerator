@@ -1,7 +1,7 @@
 .sessions-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .session-card {
@@ -12,10 +12,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: var(--space-4) var(--space-5);
   cursor: pointer;
-  gap: 12px;
-  transition: background 0.15s;
+  gap: var(--space-3);
+  transition: background var(--transition-fast);
 }
 
 .session-header:hover {
@@ -25,14 +25,14 @@
 .session-header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
 .session-company-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(220,38,38,0.08);
   border: 1px solid rgba(220,38,38,0.18);
   display: flex;
@@ -43,16 +43,16 @@
 }
 
 .session-company-name {
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
   color: var(--text-primary);
 }
 
 .session-meta {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.75rem;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
   color: var(--text-muted);
   margin-top: 2px;
 }
@@ -60,18 +60,18 @@
 .session-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
 .session-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 99px;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   background: rgba(255,255,255,0.06);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
@@ -91,7 +91,7 @@
 
 .session-chevron {
   color: var(--text-muted);
-  transition: transform 0.2s;
+  transition: transform var(--transition-base);
   flex-shrink: 0;
 }
 
@@ -101,12 +101,12 @@
 
 .session-hunts {
   border-top: 1px solid var(--border-subtle);
-  padding: 1.25rem;
+  padding: var(--space-5);
   background: rgba(0,0,0,0.1);
 }
 
 .session-hunts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 14px;
+  gap: var(--space-4);
 }

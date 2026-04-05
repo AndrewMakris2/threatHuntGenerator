@@ -19,7 +19,7 @@
   filter: brightness(1.15);
 }
 
-.mitre-badge-id { font-weight: 700; }
+.mitre-badge-id { font-weight: var(--font-bold); }
 
 .mitre-badge-name {
   font-family: var(--font-sans);
