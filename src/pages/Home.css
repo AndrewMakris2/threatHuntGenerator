@@ -27,6 +27,8 @@
 .home-hero-inner {
   position: relative;
   max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 .home-hero-badge {
@@ -63,7 +65,7 @@
   color: var(--text-secondary);
   line-height: 1.7;
   max-width: 580px;
-  margin-bottom: var(--space-6);
+  margin: 0 auto var(--space-6);
 }
 
 .home-hero-actions {
@@ -71,6 +73,7 @@
   gap: var(--space-3);
   flex-wrap: wrap;
   margin-bottom: var(--space-6);
+  justify-content: center;
 }
 
 .home-hero-stats {
@@ -79,6 +82,7 @@
   flex-wrap: wrap;
   padding-top: var(--space-4);
   border-top: 1px solid var(--border-subtle);
+  justify-content: center;
 }
 
 .home-hero-stat {
@@ -108,7 +112,7 @@
 /* ── Sections ── */
 .home-section {
   margin-bottom: var(--space-10);
-  padding: 0 var(--space-1);
+  padding: 0 var(--space-2);
 }
 
 .home-section-label {
