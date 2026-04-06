@@ -11,7 +11,6 @@ import Modal from '../components/common/Modal';
 import { HUNT_CATEGORIES } from '../data/huntTemplates';
 import { MITRE_TACTICS, getTechniqueById } from '../data/mitreTechniques';
 import { exportHuntsAsJSON, exportHuntsAsPDF, exportHuntsAsCSV } from '../services/exportService';
-import { STATUS_OPTIONS, STATUS_CONFIG } from '../components/hunt/StatusBadge';
 import './HuntResults.css';
 
 const SEVERITY_OPTS   = ['critical','high','medium','low'];

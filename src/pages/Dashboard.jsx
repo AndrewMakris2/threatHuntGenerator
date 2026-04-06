@@ -14,14 +14,13 @@ import HuntCard from '../components/hunt/HuntCard';
 import HuntDetail from '../components/hunt/HuntDetail';
 import Modal from '../components/common/Modal';
 import { getEnvironmentRiskScore, getCategoryStats } from '../services/huntGenerationService';
-import { STATUS_CONFIG } from '../components/hunt/StatusBadge';
 import {
   fetchCISAKEV, getHuntOfTheWeek, getReHuntReminders, getWeeklyActivity,
 } from '../services/threatIntelService';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { state, getHuntStatus } = useApp();
+  const { state } = useApp();
   const navigate  = useNavigate();
   const [activeHunt,  setActiveHunt]  = useState(null);
   const [intelFeed,   setIntelFeed]   = useState([]);
