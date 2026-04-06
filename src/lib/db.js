@@ -74,3 +74,21 @@ export async function dbSaveSettings(userId, settings) {
   const ref = doc(db, 'users', userId, 'settings', 'ai');
   await setDoc(ref, { ...settings, updatedAt: serverTimestamp() }, { merge: true });
 }
+
+// ── Hunt Schedules ────────────────────────────────────────────────────────────
+
+export async function dbLoadSchedules(userId) {
+  const ref = collection(db, 'users', userId, 'huntSchedules');
+  const snap = await getDocs(query(ref, orderBy('createdAt', 'desc')));
+  return snap.docs.map(d => ({ ...d.data(), id: d.id }));
+}
+
+export async function dbSaveSchedule(userId, schedule) {
+  const ref = doc(db, 'users', userId, 'huntSchedules', schedule.id);
+  await setDoc(ref, { ...schedule, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function dbDeleteSchedule(scheduleId, userId) {
+  const ref = doc(db, 'users', userId, 'huntSchedules', scheduleId);
+  await deleteDoc(ref);
+}

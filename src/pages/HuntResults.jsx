@@ -11,13 +11,14 @@ import Modal from '../components/common/Modal';
 import { HUNT_CATEGORIES } from '../data/huntTemplates';
 import { MITRE_TACTICS, getTechniqueById } from '../data/mitreTechniques';
 import { exportHuntsAsJSON, exportHuntsAsPDF, exportHuntsAsCSV } from '../services/exportService';
+import { STATUS_OPTIONS, STATUS_CONFIG } from '../components/hunt/StatusBadge';
 import './HuntResults.css';
 
 const SEVERITY_OPTS   = ['critical','high','medium','low'];
 const DIFFICULTY_OPTS = ['beginner','intermediate','advanced','expert'];
 
 export default function HuntResults() {
-  const { state, dispatch, addToast } = useApp();
+  const { state, dispatch, addToast, getHuntStatus } = useApp();
   const [confirmClear, setConfirmClear] = useState(false);
   const navigate = useNavigate();
   const { generatedHunts: hunts, companyProfile: profile } = state;
@@ -27,6 +28,7 @@ export default function HuntResults() {
   const [sevFilter,   setSevFilter]   = useState('');
   const [diffFilter,  setDiffFilter]  = useState('');
   const [mitreFilter, setMitreFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [activeHunt,  setActiveHunt]  = useState(null);
   const [sortBy,      setSortBy]      = useState('relevance');
@@ -41,6 +43,7 @@ export default function HuntResults() {
       const id = typeof t === 'string' ? t : t?.id;
       return getTechniqueById(id)?.tactic === mitreFilter || t?.tactic === mitreFilter;
     }));
+    if (statusFilter !== '') list = list.filter(h => (getHuntStatus(h.id) || null) === (statusFilter === 'null' ? null : statusFilter));
 
     list.sort((a, b) => {
       if (sortBy === 'relevance') return (b.relevanceScore || 0) - (a.relevanceScore || 0);
@@ -50,11 +53,11 @@ export default function HuntResults() {
       return 0;
     });
     return list;
-  }, [hunts, search, catFilter, sevFilter, diffFilter, mitreFilter, sortBy]);
+  }, [hunts, search, catFilter, sevFilter, diffFilter, mitreFilter, statusFilter, getHuntStatus, sortBy]);
 
-  const activeFilters = [catFilter, sevFilter, diffFilter, mitreFilter].filter(Boolean).length;
+  const activeFilters = [catFilter, sevFilter, diffFilter, mitreFilter, statusFilter].filter(Boolean).length;
 
-  function clearFilters() { setCatFilter(''); setSevFilter(''); setDiffFilter(''); setMitreFilter(''); setSearch(''); }
+  function clearFilters() { setCatFilter(''); setSevFilter(''); setDiffFilter(''); setMitreFilter(''); setSearch(''); setStatusFilter(''); }
 
   function handleExportJSON() { exportHuntsAsJSON(filtered, `${profile?.companyName || 'hunts'}`); addToast('Exported as JSON', 'success'); }
   function handleExportCSV()  { exportHuntsAsCSV(filtered,  `${profile?.companyName || 'hunts'}`); addToast('Exported as CSV', 'success'); }
@@ -136,7 +139,7 @@ export default function HuntResults() {
       {/* Filter panel */}
       {showFilters && (
         <div className="card hunt-results-filters animate-fade-in">
-          <div className="grid-4">
+          <div className="grid-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}>
             <div className="form-group">
               <label className="form-label">Category</label>
               <select className="form-select" value={catFilter} onChange={e => setCatFilter(e.target.value)}>
@@ -163,6 +166,17 @@ export default function HuntResults() {
               <select className="form-select" value={mitreFilter} onChange={e => setMitreFilter(e.target.value)}>
                 <option value="">All tactics</option>
                 {MITRE_TACTICS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select className="form-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                <option value="">All statuses</option>
+                <option value="null">Not Started</option>
+                <option value="in-progress">In Progress</option>
+                <option value="complete">Complete</option>
+                <option value="no-findings">No Findings</option>
+                <option value="escalated">Escalated</option>
               </select>
             </div>
           </div>

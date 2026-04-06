@@ -14,19 +14,33 @@ import HuntCard from '../components/hunt/HuntCard';
 import HuntDetail from '../components/hunt/HuntDetail';
 import Modal from '../components/common/Modal';
 import { getEnvironmentRiskScore, getCategoryStats } from '../services/huntGenerationService';
+import { STATUS_CONFIG } from '../components/hunt/StatusBadge';
 import {
   fetchCISAKEV, getHuntOfTheWeek, getReHuntReminders, getWeeklyActivity,
 } from '../services/threatIntelService';
 import './Dashboard.css';
 
 export default function Dashboard() {
-  const { state } = useApp();
+  const { state, getHuntStatus } = useApp();
   const navigate  = useNavigate();
   const [activeHunt,  setActiveHunt]  = useState(null);
   const [intelFeed,   setIntelFeed]   = useState([]);
   const [intelLoading, setIntelLoading] = useState(true);
 
   const { companyProfile: profile, generatedHunts: hunts, savedHunts, profileComplete, huntSessions } = state;
+
+  const statusCounts = React.useMemo(() => {
+    const counts = { 'not-started': 0, 'in-progress': 0, 'complete': 0, 'no-findings': 0, 'escalated': 0 };
+    const allHunts = [...state.generatedHunts, ...state.savedHunts];
+    const seen = new Set();
+    allHunts.forEach(h => {
+      if (seen.has(h.id)) return;
+      seen.add(h.id);
+      const s = state.huntStatuses?.[h.id] || 'not-started';
+      if (counts[s] !== undefined) counts[s]++;
+    });
+    return counts;
+  }, [state.generatedHunts, state.savedHunts, state.huntStatuses]);
 
   const riskScore     = profileComplete ? getEnvironmentRiskScore(profile) : 0;
   const catStats      = getCategoryStats(hunts);
@@ -152,6 +166,36 @@ export default function Dashboard() {
           accentLine
         />
       </div>
+
+      {/* ── Hunt Status Breakdown ── */}
+      {(state.generatedHunts.length > 0 || state.savedHunts.length > 0) && (
+        <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
+          <div className="section-title" style={{ marginBottom: 'var(--space-4)' }}>Hunt Status Breakdown</div>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
+            {[
+              { key: 'not-started', label: 'Not Started', color: 'var(--text-muted)' },
+              { key: 'in-progress', label: 'In Progress', color: '#7dd3fc' },
+              { key: 'complete',    label: 'Complete',    color: '#86efac' },
+              { key: 'no-findings', label: 'No Findings', color: '#94a3b8' },
+              { key: 'escalated',   label: 'Escalated',   color: '#fdba74' },
+            ].map(({ key, label, color }) => (
+              <div key={key} style={{
+                flex: '1', minWidth: 100,
+                padding: 'var(--space-3) var(--space-4)',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-lg)',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 'var(--text-xl)', fontWeight: 'var(--font-bold)', color, lineHeight: 1 }}>
+                  {statusCounts[key]}
+                </div>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Middle row ── */}
       <div className="dashboard-middle">

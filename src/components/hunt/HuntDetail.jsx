@@ -13,12 +13,13 @@ import {
 } from '../../services/exportService';
 import { HUNT_CATEGORIES } from '../../data/huntTemplates';
 import PDFCustomizer from '../export/PDFCustomizer';
+import StatusBadge from './StatusBadge';
 import './HuntDetail.css';
 
 const TABS = ['Overview', 'Hunt Steps', 'Queries', 'IOCs', 'Remediation', 'Notes'];
 
 export default function HuntDetail({ hunt, onClose }) {
-  const { isHuntSaved, toggleSaveHunt, addToast, activeCompany } = useApp();
+  const { isHuntSaved, toggleSaveHunt, addToast, activeCompany, getHuntStatus, setHuntStatus } = useApp();
   const [activeTab, setActiveTab] = useState('Overview');
   const [notes, setNotes]         = useState(hunt.notes || '');
   const [showPDFCustomizer, setShowPDFCustomizer] = useState(false);
@@ -26,6 +27,7 @@ export default function HuntDetail({ hunt, onClose }) {
   if (!hunt) return null;
 
   const saved    = isHuntSaved(hunt.id);
+  const status   = getHuntStatus(hunt.id);
   const category = HUNT_CATEGORIES.find(c => c.id === hunt.category);
 
   function handleCopy() {
@@ -66,6 +68,14 @@ export default function HuntDetail({ hunt, onClose }) {
             )}
             <SeverityBadge severity={hunt.severity} />
             <DifficultyBadge difficulty={hunt.difficulty} />
+            <StatusBadge
+              status={status}
+              size="md"
+              onChange={s => {
+                setHuntStatus(hunt.id, s);
+                addToast(`Status updated to ${s || 'Not Started'}`, 'success');
+              }}
+            />
           </div>
 
           <div className="hunt-detail-header-actions">

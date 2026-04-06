@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { MITREList } from './MITREBadge';
+import StatusBadge from './StatusBadge';
 import { HUNT_CATEGORIES } from '../../data/huntTemplates';
 import { exportSingleHuntJSON, copyHuntToClipboard } from '../../services/exportService';
 import './HuntCard.css';
@@ -21,9 +22,10 @@ const MATURITY_LABELS = { good: 'Good Fit', stretch: 'Stretch', advanced: 'Advan
 const MATURITY_COLORS = { good: 'badge-low', stretch: 'badge-medium', advanced: 'badge-high' };
 
 export default function HuntCard({ hunt, onOpen, compact = false }) {
-  const { isHuntSaved, toggleSaveHunt, addToast } = useApp();
+  const { isHuntSaved, toggleSaveHunt, addToast, getHuntStatus, setHuntStatus } = useApp();
   const [expanded, setExpanded] = useState(false);
   const saved = isHuntSaved(hunt.id);
+  const status = getHuntStatus(hunt.id);
 
   const sev  = SEVERITY_CONFIG[hunt.severity] || SEVERITY_CONFIG.medium;
   const category = HUNT_CATEGORIES.find(c => c.id === hunt.category);
@@ -80,6 +82,11 @@ export default function HuntCard({ hunt, onOpen, compact = false }) {
               <Zap size={9} /> AI
             </span>
           )}
+          <StatusBadge
+            status={status}
+            size="sm"
+            onChange={s => setHuntStatus(hunt.id, s)}
+          />
         </div>
 
         <div className="hunt-card-actions">

@@ -4,7 +4,7 @@
  */
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { auth, isFirebaseEnabled as isSupabaseEnabled } from '../lib/firebase';
-import { dbLoadCompanies, dbSaveCompany, dbDeleteCompany, dbLoadSavedHunts, dbSaveHunt, dbUnsaveHunt, dbSaveSession, dbLoadSessions, dbDeleteSession } from '../lib/db';
+import { dbLoadCompanies, dbSaveCompany, dbDeleteCompany, dbLoadSavedHunts, dbSaveHunt, dbUnsaveHunt, dbSaveSession, dbLoadSessions, dbDeleteSession, dbLoadSchedules, dbSaveSchedule, dbDeleteSchedule } from '../lib/db';
 import { EMPTY_COMPANY_PROFILE } from '../data/sampleData';
 
 // ── Initial State ─────────────────────────────────────────────────────────────
@@ -34,6 +34,12 @@ const initialState = {
 
   // AI provider settings (apiKey intentionally excluded from localStorage)
   aiSettings: { provider: 'anthropic', model: '', endpoint: '' },
+
+  // Hunt schedules
+  huntSchedules: [],
+
+  // Hunt statuses — keyed by huntId
+  huntStatuses: {},
 
   // UI
   sidebarCollapsed: false,
@@ -92,8 +98,16 @@ export const ACTIONS = {
   DELETE_HUNT_SESSION:   'DELETE_HUNT_SESSION',
   CLEAR_HUNT_SESSIONS:   'CLEAR_HUNT_SESSIONS',
 
+  // Hunt schedules
+  ADD_SCHEDULE:    'ADD_SCHEDULE',
+  UPDATE_SCHEDULE: 'UPDATE_SCHEDULE',
+  DELETE_SCHEDULE: 'DELETE_SCHEDULE',
+
   // Cloud sync
   LOAD_FROM_DB:          'LOAD_FROM_DB',
+
+  // Hunt status
+  SET_HUNT_STATUS:       'SET_HUNT_STATUS',
 };
 
 // ── Reducer ───────────────────────────────────────────────────────────────────
@@ -289,6 +303,7 @@ function appReducer(state, action) {
       const companies   = action.companies?.length   > 0 ? action.companies   : state.savedCompanies;
       const savedHunts  = action.savedHunts?.length  > 0 ? action.savedHunts  : state.savedHunts;
       const huntSessions = action.huntSessions?.length > 0 ? action.huntSessions : state.huntSessions;
+      const huntSchedules = action.huntSchedules?.length > 0 ? action.huntSchedules : state.huntSchedules;
       const activeId = companies.find(c => c.id === state.activeCompanyId)
         ? state.activeCompanyId
         : companies[0]?.id ?? state.activeCompanyId;
@@ -297,9 +312,36 @@ function appReducer(state, action) {
         savedCompanies: companies,
         savedHunts,
         huntSessions,
+        huntSchedules,
         activeCompanyId: activeId,
       };
     }
+
+    case ACTIONS.SET_HUNT_STATUS:
+      return {
+        ...state,
+        huntStatuses: {
+          ...state.huntStatuses,
+          [action.huntId]: action.status,
+        },
+      };
+
+    case ACTIONS.ADD_SCHEDULE:
+      return { ...state, huntSchedules: [action.schedule, ...state.huntSchedules] };
+
+    case ACTIONS.UPDATE_SCHEDULE:
+      return {
+        ...state,
+        huntSchedules: state.huntSchedules.map(s =>
+          s.id === action.schedule.id ? { ...s, ...action.schedule } : s
+        ),
+      };
+
+    case ACTIONS.DELETE_SCHEDULE:
+      return {
+        ...state,
+        huntSchedules: state.huntSchedules.filter(s => s.id !== action.scheduleId),
+      };
 
     default:
       return state;
@@ -326,7 +368,9 @@ function loadPersistedState() {
       savedCompanies: saved.savedCompanies || [],
       activeCompanyId: saved.activeCompanyId || null,
       huntSessions: saved.huntSessions || [],
+      huntSchedules: saved.huntSchedules || [],
       aiSettings: saved.aiSettings ? { provider: saved.aiSettings.provider || 'anthropic', model: saved.aiSettings.model || '', endpoint: saved.aiSettings.endpoint || '', apiKey: saved.aiSettings.apiKey || '' } : { provider: 'anthropic', model: '', endpoint: '', apiKey: '' },
+      huntStatuses: saved.huntStatuses || {},
     };
   } catch {
     return null;
@@ -348,12 +392,13 @@ export function AppProvider({ children }) {
     const uid = user?.uid || user?.id || auth?.currentUser?.uid;
     if (!uid) return;
     try {
-      const [companies, savedHunts, huntSessions] = await Promise.all([
+      const [companies, savedHunts, huntSessions, huntSchedules] = await Promise.all([
         dbLoadCompanies(uid),
         dbLoadSavedHunts(uid),
         dbLoadSessions(uid),
+        dbLoadSchedules(uid),
       ]);
-      dispatch({ type: ACTIONS.LOAD_FROM_DB, companies, savedHunts, huntSessions });
+      dispatch({ type: ACTIONS.LOAD_FROM_DB, companies, savedHunts, huntSessions, huntSchedules });
     } catch (err) {
       console.warn('[THG] Cloud sync failed:', err.message);
     }
@@ -395,6 +440,15 @@ export function AppProvider({ children }) {
         case ACTIONS.DELETE_HUNT_SESSION:
           await dbDeleteSession(action.sessionId, uid);
           break;
+        case ACTIONS.ADD_SCHEDULE:
+          await dbSaveSchedule(uid, action.schedule);
+          break;
+        case ACTIONS.UPDATE_SCHEDULE:
+          await dbSaveSchedule(uid, action.schedule);
+          break;
+        case ACTIONS.DELETE_SCHEDULE:
+          await dbDeleteSchedule(action.scheduleId, uid);
+          break;
         default:
           break;
       }
@@ -415,7 +469,9 @@ export function AppProvider({ children }) {
         savedCompanies: state.savedCompanies,
         activeCompanyId: state.activeCompanyId,
         huntSessions: state.huntSessions,
+        huntSchedules: state.huntSchedules,
         aiSettings: { provider: state.aiSettings.provider, model: state.aiSettings.model, endpoint: state.aiSettings.endpoint, apiKey: state.aiSettings.apiKey || '' },
+        huntStatuses: state.huntStatuses,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     } catch { /* quota exceeded or SSR */ }
@@ -423,6 +479,7 @@ export function AppProvider({ children }) {
     state.companyProfile, state.profileComplete, state.savedHunts,
     state.generatedHunts, state.lastGeneratedAt,
     state.savedCompanies, state.activeCompanyId, state.aiSettings, state.huntSessions,
+    state.huntSchedules, state.huntStatuses,
   ]);
 
   // ── Helper actions ───────────────────────────────────────────────────────
@@ -450,11 +507,23 @@ export function AppProvider({ children }) {
     [isHuntSaved, addToast, syncDispatch]
   );
 
+  const getHuntStatus = useCallback(
+    (huntId) => state.huntStatuses[huntId] || null,
+    [state.huntStatuses]
+  );
+
+  const setHuntStatus = useCallback(
+    (huntId, status) => {
+      dispatch({ type: ACTIONS.SET_HUNT_STATUS, huntId, status });
+    },
+    []
+  );
+
   // Computed: active company object
   const activeCompany = state.savedCompanies.find(c => c.id === state.activeCompanyId) || null;
 
   return (
-    <AppContext.Provider value={{ state, dispatch, addToast, isHuntSaved, toggleSaveHunt, activeCompany, syncFromCloud, syncDispatch }}>
+    <AppContext.Provider value={{ state, dispatch, addToast, isHuntSaved, toggleSaveHunt, activeCompany, syncFromCloud, syncDispatch, getHuntStatus, setHuntStatus }}>
       {children}
     </AppContext.Provider>
   );
