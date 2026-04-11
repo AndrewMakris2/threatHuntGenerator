@@ -161,7 +161,7 @@ export default function HuntDetail({ hunt, onClose }) {
       {/* PDF Customizer Modal */}
       {showPDFCustomizer && (
         <PDFCustomizer
-          hunt={hunt}
+          hunt={{ ...hunt, notes }}
           activeCompany={activeCompany}
           onClose={() => setShowPDFCustomizer(false)}
         />

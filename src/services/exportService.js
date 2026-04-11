@@ -719,6 +719,13 @@ function buildSingleHuntPDF(hunt, brandOptions = {}) {
       <ul>${listItems(hunt.dataSources)}</ul>
     </div>` : ''}
 
+    <!-- Analyst Notes -->
+    ${sections.notes !== false && hunt.notes ? `
+    <div class="section">
+      <div class="section-title">Analyst Notes</div>
+      <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px 16px;font-size:12px;line-height:1.7;color:#d4d4d4;white-space:pre-wrap;font-family:'Courier New',monospace;">${escapeHtml(hunt.notes)}</div>
+    </div>` : ''}
+
   </div>
 
   <!-- Footer -->
